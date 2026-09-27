@@ -11,6 +11,8 @@ devenv.local.yaml
 
 # Rust
 /target/
+/vendor/target/
+/work/
 
 # macOS
 .DS_Store

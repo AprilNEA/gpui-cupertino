@@ -1,5 +1,8 @@
 { ... }:
 {
+  # GPUI compiles Metal with the selected Xcode, which the Nix SDK does not ship.
+  apple.sdk = null;
+
   languages.rust = {
     enable = true;
     channel = "stable";

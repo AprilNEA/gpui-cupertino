@@ -12,6 +12,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Prepare Metal compiler
+        run: |
+          xcodebuild -downloadComponent MetalToolchain
+          xcrun -sdk macosx metal --version
       - uses: cachix/install-nix-action@v31
       - uses: cachix/cachix-action@v16
         with:

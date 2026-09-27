@@ -7,3 +7,6 @@ description = "Framework-independent foundations for Apple-inspired user interfa
 
 [lints]
 workspace = true
+
+[dependencies]
+thiserror = "2.0.21"

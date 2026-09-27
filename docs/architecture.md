@@ -1,60 +1,31 @@
 # Repository layout
 
-```text
-.
-├── crates/
-│   ├── cupertino/
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── design/
-│   │       ├── materials/
-│   │       └── motion/
-│   └── gpui-cupertino/
-│       ├── examples/
-│       └── src/
-│           ├── lib.rs
-│           ├── components/
-│           ├── theme/
-│           ├── materials/
-│           ├── motion/
-│           └── platform/
-├── docs/
-├── .github/workflows/
-├── Cargo.toml
-└── devenv.nix
-```
+`gpui-cupertino` depends on `cupertino`. The core crate stays independent of GPUI,
+window systems, GPU resources, and platform APIs.
 
-The feature directories are tracked with `.gitkeep` until their first
-implementation. They are not yet Rust modules or public APIs. Remove each
-placeholder when adding source files to its directory.
-
-## Crate boundaries
-
-`gpui-cupertino` depends on `cupertino`. The core crate must remain independent
-of GPUI, window systems, GPU resources, and platform APIs.
-
-| Directory | Responsibility |
+| Path | Responsibility |
 | --- | --- |
-| `cupertino/src/design/` | Framework-independent color, typography, spacing, and geometry values. |
-| `cupertino/src/materials/` | Material descriptions and parameters; no rendering or texture ownership. |
-| `cupertino/src/motion/` | Time-based interpolation, easing, and spring calculations; no frame scheduling. |
-| `gpui-cupertino/src/components/` | Controls and containers, with their state, focus, input, and accessibility behavior. |
-| `gpui-cupertino/src/theme/` | Resolve core design values into GPUI styles for appearance and control states. |
-| `gpui-cupertino/src/materials/` | Material rendering and compositing through GPUI. |
-| `gpui-cupertino/src/motion/` | Drive animations through GPUI updates and invalidation. |
-| `gpui-cupertino/src/platform/` | Native integrations, isolated behind target-specific compilation. |
-| `gpui-cupertino/examples/` | Runnable Cargo examples, including the component gallery when implemented. |
-| `docs/` | Architecture and contributor-facing design documentation. |
+| `crates/cupertino/src/materials.rs` | Validated, renderer-independent material descriptions. |
+| `crates/cupertino/src/motion.rs` | Validated spring parameters and presets; no animation scheduler. |
+| `crates/gpui-cupertino/src/materials.rs` | Glass element, GPUI paint boundary, opaque accessibility fallback. |
+| `crates/gpui-cupertino/src/motion.rs` | Convert spring parameters to GPUI's existing spring animation. |
+| `crates/gpui-cupertino/src/platform.rs` | Public AppKit accessibility preference observation. |
+| `crates/gpui-cupertino/examples/` | Runnable interaction and material checks. |
+| `crates/gpui-cupertino/tests/` | Scene ordering and actual Metal output regression tests. |
+| `vendor/crates/gpui/src/scene/` | Ordered backdrop primitives and batching. |
+| `vendor/crates/gpui_apple/src/metal_renderer/` | Independent material shader and Metal passes. |
+| `docs/` | Public architecture and implementation contracts. |
+| `internal-docs/` | Ignored local research; never part of the source distribution. |
 
-Keep component-specific behavior beside its component. Move code into a shared
-module when multiple implementations actually need it. Platform-specific code
-does not belong in the core crate.
+The remaining `design/`, `components/`, and `theme/` placeholders do not expose
+APIs. Add shared modules when actual components need them. Keep component state,
+input, focus, and accessibility behavior beside the component.
 
-## Rust modules and checks
+The vendored GPUI dependency closure is a separate workspace, pinned to the
+revision recorded in `vendor/README.md`. Only the backdrop integration changes
+its behavior. Cupertino's root checks exercise this integration without running
+unrelated upstream application examples and tests.
 
-- Add module declarations with their first implementation, documenting public items.
-- Use `name.rs` for implementations; use `name/mod.rs` for namespace shells.
-- Keep unit tests beside meaningful logic. Add crate-local `tests/` for public API
-  integration tests and `benches/` for implemented hot paths when needed.
-- Add example assets beside the example that uses them.
-- Run `devenv test` before committing; CI uses the same command.
+Use `name.rs` for implementations and `name/mod.rs` for namespace shells. Put
+meaningful unit tests beside their logic and integration checks under `tests/`.
+Run `devenv test` before committing; CI uses the same command.

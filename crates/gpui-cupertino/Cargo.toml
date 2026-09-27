@@ -5,8 +5,24 @@ edition.workspace = true
 publish.workspace = true
 description = "Apple-inspired components, materials, and motion for GPUI."
 
+[[bench]]
+name = "backdrop"
+harness = false
+
 [lints]
 workspace = true
 
 [dependencies]
 cupertino = { version = "0.1.0", path = "../cupertino" }
+gpui = { version = "0.2.2", path = "../../vendor/crates/gpui" }
+
+[dev-dependencies]
+gpui_apple = { path = "../../vendor/crates/gpui_apple", features = ["test-support"] }
+gpui_platform = { path = "../../vendor/crates/gpui_platform" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6.2"
+futures = "0.3.34"
+objc2 = "0.6.4"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSWorkspace", "NSAccessibility"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSNotification", "NSOperation", "NSString", "block2"] }
