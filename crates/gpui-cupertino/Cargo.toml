@@ -1,0 +1,12 @@
+[package]
+name = "gpui-cupertino"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "Apple-inspired components, materials, and motion for GPUI."
+
+[lints]
+workspace = true
+
+[dependencies]
+cupertino = { version = "0.1.0", path = "../cupertino" }

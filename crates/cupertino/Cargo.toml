@@ -1,0 +1,9 @@
+[package]
+name = "cupertino"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "Framework-independent foundations for Apple-inspired user interfaces."
+
+[lints]
+workspace = true
