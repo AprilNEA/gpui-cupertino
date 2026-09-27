@@ -11,6 +11,9 @@ The workspace currently contains the development setup and crate skeletons.
 Components and the GPUI dependency will be added with the first implementation.
 Publishing is disabled until the initial API and license are defined.
 
+See [repository layout](docs/architecture.md) for directory responsibilities and
+dependency boundaries.
+
 ## Development
 
 Install [Nix](https://nixos.org/download/) and [devenv](https://devenv.sh/getting-started/).
