@@ -1,4 +1,9 @@
 //! Run with `cargo run -p gpui-cupertino --example glass` on macOS.
+//! Add `-- --inspect-color-space` to print the attached Metal layer's color-space state and exit.
+
+#[cfg(target_os = "macos")]
+#[path = "glass/diagnostics.rs"]
+mod diagnostics;
 
 #[cfg(target_os = "macos")]
 mod demo {
@@ -215,7 +220,8 @@ mod demo {
     }
 
     pub fn run() {
-        gpui_platform::application().run(|cx: &mut App| {
+        let inspect_color_space = std::env::args().any(|arg| arg == "--inspect-color-space");
+        gpui_platform::application().run(move |cx: &mut App| {
             accessibility_preferences(cx);
             cx.on_window_closed(|cx, _| {
                 if cx.windows().is_empty() {
@@ -236,6 +242,9 @@ mod demo {
             )
             .expect("the glass demo requires a graphical macOS session");
             cx.activate(true);
+            if inspect_color_space {
+                super::diagnostics::inspect_color_space_and_quit(cx);
+            }
         });
     }
 }

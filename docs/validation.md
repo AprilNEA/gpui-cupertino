@@ -225,9 +225,11 @@ Six geometry configurations showed that changing radius 20→64 at a fixed
 | 96 | 2.857143 | 8.333333 |
 | 128 | 3.428571 | 10 |
 
-All sampled widths were at least their heights; these observations cannot yet
-distinguish height from minimum-dimension dependence. This is a measured range,
-not a universal interpolation rule. The inactive
+A subsequent 32-case sweep included the transposed pair 128×96 and 96×128
+with radius 20. Both produced regular blur-radius 2.857143 and clear 8.333333
+in both appearances. This rejects a height-only rule and supports minimum-
+dimension dependence in the sampled range; it does not establish a universal
+interpolation rule. The inactive
 key/fill highlight layer had zero opacity and zero color alpha, whereas the
 demo used a nonzero directional highlight. The observed refraction-opacity
 input of zero does not establish that all inner refraction is disabled: the
@@ -243,6 +245,33 @@ clear), and 48.45 (dark clear). Applying that same formula in linear RGB was
 worse. For example, light regular over pure green predicted [172,247,172] but
 measured [129,255,139]. No preset was accepted from this falsified model.
 
+Further measurements separated the transform from the output color conversion.
+A fixed luminance/chroma formula, using the observed filter inputs and Rec.709
+weights `(0.2126, 0.7152, 0.0722)`, predicted all 64 solid-color cases and both
+captures within one encoded level. This includes 24 additional midtone cases;
+no coefficients were fitted:
+
+```text
+luma = dot(weights, input)
+face = input + ((white - black - 1) * luma + black)
+output = clamp((1 - fill_alpha) * face + fill_alpha * fill_color, 0, 1)
+```
+
+The scalar adjustment in `face` is added to all three channels, preserving
+color differences before fill. The inputs and outputs here are the original
+captured **display-profile RGB code values**, with each capture's no-glass
+control as input. Applying the earlier scalar contrast model after conversion
+to sRGB tests a different hypothesis. Maximum channel errors for light regular,
+dark regular, light clear, and dark clear were 0.565, 0.538408, 0.475, and
+0.533513 levels respectively. Clamping `face` before fill was falsified by the
+dark regular blue sample (12.25 levels).
+
+This establishes a color-response model for the measured inactive state and
+display profile. It does not establish the compositor's texture format, a
+portable sRGB implementation, blur behavior, or a complete native preset.
+AppKit independently decoded the untagged input PNGs as sRGB, matching explicit
+sRGB `CGColor` backgrounds; the screen captures use the display's ICC profile.
+
 Using independently captured black/white outputs as threshold endpoints,
 the step probes gave the following 10–90% output linear-luminance widths. Both
 axes and both repeats agreed at the displayed precision. These widths include
@@ -255,16 +284,74 @@ the native color response and must not be labeled Gaussian sigma.
 | Light / clear | 47.858 |
 | Dark / clear | 44.727 |
 
+Repeating the thresholds in encoded RGB, which removes the measured gray
+transfer from the width statistic, gave 10–90% widths of 21.125 / 21.250 logical
+pixels for light/dark regular and 48.200 / 47.850 for light/dark clear. Horizontal
+and vertical widths and repeats agreed. The ratio of 10–90% to 25–75% width was
+2.055–2.099 for regular and 1.740–1.763 for clear, compared with approximately
+1.900 for a Gaussian step response. These measurements do not establish a
+Gaussian kernel; an equivalent sigma from one width alone would miss the
+observed transition shape.
+
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
 with the circle boundary; this cannot be explained by one position-independent
-color mapping. It is evidence of spatial optical behavior, but the unresolved
-RGB response prevents a reliable conversion to source displacement in pixels.
+color mapping. It is evidence of spatial optical behavior. The now-verified
+color response permits an inverse check, but blur, clipped channels, and the
+source/display conversion must still be accounted for before attributing a
+pixel displacement to a particular optical parameter.
+
+An inverse check of the fixed color formula across 600 ramp samples supports
+the observed inner-refraction amount/height `-60 / 20` in logical pixels with
+the candidate profile `1 - sqrt(t * (2 - t))`. At depths 2, 4, and 8 logical
+pixels, predicted inward offsets were 33.90, 24.02, and 12.01; measured ranges
+were 32.33–35.34, 22.56–25.57, and 10.53–14.29 across appearances and shapes.
+No sampled output channel was clipped, and repeats were identical. Maximum
+residuals were 2.542 logical pixels for regular and 3.295 for clear. Perturbing
+the captured channels by one encoded level produced coordinate spans of
+6.02–12.78 logical pixels after inversion and 8-bit ICC conversion. This is
+support for the sign, scale, and decay of the candidate, not proof of exact
+curve equality or an attribution of the remaining residual to one cause.
+
+A same-view gray→green→gray sweep produced 12 valid inactive observations.
+None of the 163 inspected filter/effect/layer fields changed in any of the four
+style/appearance combinations. This supports stable host-side inputs for that
+experiment; it does not prove that later GPU processing ignores the background.
+
+The comparison's display path is also part of the calibration boundary. The
+headless renderer exports untagged RGB PNG bytes, which AppKit interprets as
+sRGB before display. GPUI creates a `BGRA8Unorm` `CAMetalLayer` without explicitly
+setting its color space. Although Apple's documented creation default is `nil`
+(no color matching), the **actual attached GPUIView layer** reported
+`kCGColorSpaceSRGB` in the running example. The two measured display paths thus
+both specify sRGB on this machine. Creation defaults alone would have led to
+an incorrect conclusion; no renderer color-space change was needed.
+
+The live inspection is repeatable and exits after reading the owned window:
+
+```sh
+devenv shell -- cargo run -p gpui-cupertino --example glass --locked -- --inspect-color-space
+```
+
+This inspects the renderer-owning `GPUIView` inside AppKit's content view,
+checks that its layer is a `CAMetalLayer`, and prints its actual color-space
+name. It neither sets the property nor assumes an expected value. A formula
+verified in display RGB still cannot be copied directly into the renderer's
+linear RGB stage: the source/display transform remains part of the model.
+See [Apple's colorspace contract](https://developer.apple.com/documentation/quartzcore/cametallayer/colorspace).
 
 No private filter calls, system shader binaries, or host recipes are used by the
 library. Local inspection tools, raw logs, and provenance remain in the ignored
 research directory. Mathematical fitting is pending a SciPy-enabled analysis
 environment; acquisition and fixed-formula verification are independent of it.
-Active-window inspection was attempted but rejected by its state assertions;
-the graphical session was independently confirmed locked. No active-state
-parameter result is claimed from those attempts.
+Active-state parameters were subsequently obtained with `active=true`,
+`key=true`, and `visible=true` for all four styles/appearances at 256×128/r20.
+Three valid cases came from one run; a separate single-case run supplied dark
+clear after the earlier run lost focus. Failed state samples were excluded.
+The differences are material: active regular enables refraction opacity 0.3,
+bleed opacity approximately 0.3333333 (light) / 0.5333334 (dark), and shadow
+opacity approximately 0.3214286 / 0.2928571. Active clear changes the blur-radius
+input from 10 to 1, white/black/saturation to 1.15 / 0.075 / 1.06, and fill alpha
+to zero; a holding-tone stage is also enabled. All active key/fill highlight
+layers have opacity 1 and color alpha 1. The inactive color-model verification
+must not be generalized to these active recipes without new pixel probes.
