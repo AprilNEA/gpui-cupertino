@@ -59,6 +59,13 @@ System preferences are injected into the cached application state for these
 checks; the tests do not mutate macOS settings or claim to test delivery of a
 real AppKit notification.
 
+An additional full-image check exercises two overlapping tinted materials with
+ancestor opacity, in both paint orders at 1×/2×. It changes the background A→B→A
+while reusing the renderer and cached paint operations. Actual `Scene::replay`
+through nested layers must match fresh rendering byte-for-byte, and each pixel
+must agree with independently calculated sequential linear-light composition
+within two encoded levels.
+
 Retained GPUI spring tests use scheduler seeds 0, 1, and 42. They check position
 continuity and forward momentum during reversal, stopping frame requests after
 settling, mid-flight reduced-motion changes, and resuming with no stale velocity.
@@ -111,13 +118,61 @@ devenv shell -- cargo run -p gpui-cupertino --example native_compare --locked --
 
 This creates an owned AppKit window: public `NSGlassEffectView` on the left,
 Metal readback using demo calibration parameters on the right. Both receive the
-same background and logical geometry. It captures light/dark, regular/clear,
-two background phases, and two repeated snapshots of each case. The screenshot
-metadata printed by the example includes actual display scale and key-window
-state. The calibration parameters are illustrative and have not been fitted to
-Apple's opaque style definitions.
+same background, logical bounds, and corner-radius inputs. AppKit does not
+promise the same contour or antialiasing as our analytic outlines. The example
+captures light/dark, regular/clear, two background phases, and two repeated
+snapshots of each case. It checks before and after every capture that the window
+is visible, inactive, non-key, and at the original scale. Reduce Transparency
+and Increase Contrast must both be disabled; the example checks these settings
+without changing them. A failed state check invalidates that capture run.
 
-Native capture was attempted but blocked by the host's locked graphical session;
-screen recording permission was present. No successful Apple comparison image
-or native visual-equivalence result is claimed. Numerical CSV exports remain
-available independently of the graphical session.
+## Native comparison results
+
+Three independent process runs produced 48 captures at 2× on the system listed
+above. All state checks passed. The initial exploratory run had a focus
+transition and a background mismatch, so it is excluded from these results.
+After fixing the capture state, all 252,232 far-background control pixels in
+every capture matched exactly between the two halves.
+
+The Metal half was pixel-identical in all 24 within-run repeat pairs and all 48
+cross-run comparisons of matching cases/snapshots. Native halves were identical
+in 19/24 and 30/48 comparisons respectively; every remaining channel difference
+was at most one encoded level. Worst native mean difference was 0.029712 over the
+content region and 0.083116 over the combined shape interiors. Thus the measured
+style differences are substantially larger than the observed capture variation.
+
+Each screenshot is 1536×696 pixels, with a 56-pixel title bar and two 768×640
+content regions. Registration was checked against the displayed Metal source.
+Screenshots contain the display ICC profile; source PNGs are untagged. Metrics
+therefore compare left and right within the same screenshot, without treating
+raw source-to-screenshot differences as shader errors.
+
+The following ranges cover both background phases, both snapshots, and all three
+runs. Values are mean absolute encoded RGB channel differences on a 0–255 scale,
+averaged over pixels at least two device pixels inside each analytic shape.
+These are diagnostic differences, not perceptual similarity scores or a newly
+chosen pass threshold.
+
+| Appearance / style | Rounded rectangle | Capsule | Circle |
+| --- | ---: | ---: | ---: |
+| Light / regular | 11.69–12.61 | 12.02–12.37 | 5.47–5.73 |
+| Light / clear | 10.59–10.84 | 11.94–13.65 | 13.19–13.44 |
+| Dark / regular | 6.47–6.63 | 6.53–7.05 | 5.87–5.87 |
+| Dark / clear | 10.47–10.57 | 11.06–11.55 | 11.35–11.45 |
+
+Visual inspection confirms different filtering and color response, with an
+excessively bright directional highlight in the dark Metal examples. The demo
+parameters have not been fitted to Apple's styles. These results **do not pass
+native visual-equivalence acceptance**; the mathematical reference checks above
+verify our documented primitives, not Apple's undocumented style parameters.
+
+Native evidence is limited to stationary, inactive windows at 2×. It does not
+cover active windows, 1× displays, hover/press, animation, or fusion. Three
+neighboring shapes also do not isolate Apple's sampling/grouping behavior.
+Calibration needs isolated-shape captures and separate fitting/validation
+backgrounds before changing style presets; arbitrary tuning against one image
+would not establish a reusable match.
+
+Local captures and logs are in `work/comparison-inactive-{1,2,3}` and
+`work/native-inactive-{1,2,3}.log`; diagnostic JSON files sit beside those
+directories. `work/` is ignored and is not part of the distributed library.

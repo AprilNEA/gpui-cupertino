@@ -1,4 +1,4 @@
-//! Capture public AppKit glass beside a deterministic Metal readback on the same background.
+//! Capture inactive AppKit glass beside a deterministic Metal readback on the same background.
 //! Run on macOS 26+: `cargo run -p gpui-cupertino --example native_compare -- work/comparison`.
 
 #[cfg(target_os = "macos")]
@@ -13,7 +13,7 @@ mod comparison {
     use objc2_app_kit::{
         NSAppearance, NSApplication, NSApplicationActivationPolicy, NSBackingStoreType,
         NSEventMask, NSGlassEffectView, NSGlassEffectViewStyle, NSImage, NSImageScaling,
-        NSImageView, NSView, NSWindow, NSWindowStyleMask,
+        NSImageView, NSView, NSWindow, NSWindowStyleMask, NSWorkspace,
     };
     use objc2_foundation::{NSDate, NSPoint, NSRect, NSSize, NSString};
     use std::{
@@ -128,6 +128,38 @@ mod comparison {
         }
     }
 
+    fn validate_capture_state(
+        label: &str,
+        app: &NSApplication,
+        window: &NSWindow,
+        expected_scale: f64,
+    ) -> Result<()> {
+        let visible = window.isVisible();
+        let active = app.isActive();
+        let key = window.isKeyWindow();
+        let scale = window.backingScaleFactor();
+        let workspace = NSWorkspace::sharedWorkspace();
+        let reduce_transparency = workspace.accessibilityDisplayShouldReduceTransparency();
+        let increase_contrast = workspace.accessibilityDisplayShouldIncreaseContrast();
+        println!(
+            "{label}: window={}, visible={visible}, active={active}, key={key}, scale={scale}, reduce_transparency={reduce_transparency}, increase_contrast={increase_contrast}",
+            window.windowNumber()
+        );
+        ensure!(
+            visible && !active && !key,
+            "{label}: native comparison requires a visible, inactive, non-key window"
+        );
+        ensure!(
+            scale == expected_scale,
+            "{label}: display scale changed from {expected_scale} to {scale}"
+        );
+        ensure!(
+            !reduce_transparency && !increase_contrast,
+            "{label}: native comparison requires Reduce Transparency and Increase Contrast to be disabled"
+        );
+        Ok(())
+    }
+
     pub fn run() -> Result<()> {
         ensure!(
             objc2::available!(macos = 26.0),
@@ -160,13 +192,14 @@ mod comparison {
         window.setTitle(&NSString::from_str(
             "Native AppKit (left) | Cupertino demo parameters (right)",
         ));
-        window.makeKeyAndOrderFront(None);
-        app.activate();
-        let scale = window.backingScaleFactor() as f32;
+        window.orderFront(None);
+        app.deactivate();
+        let scale = window.backingScaleFactor();
+        let render_scale = scale as f32;
         let mut renderer = MetalHeadlessRenderer::new();
         let output_size = size(
-            DevicePixels((WIDTH * scale) as i32),
-            DevicePixels((HEIGHT * scale) as i32),
+            DevicePixels((WIDTH * render_scale) as i32),
+            DevicePixels((HEIGHT * render_scale) as i32),
         );
         for dark in [false, true] {
             let appearance = NSAppearance::appearanceNamed(&NSString::from_str(if dark {
@@ -187,13 +220,13 @@ mod comparison {
                     let independent = directory.join(format!("{name}-metal.png"));
                     renderer
                         .render_scene_to_image(
-                            &scene(scale, dark, phase, false, clear),
+                            &scene(render_scale, dark, phase, false, clear),
                             output_size,
                         )?
                         .save(&background)?;
                     renderer
                         .render_scene_to_image(
-                            &scene(scale, dark, phase, true, clear),
+                            &scene(render_scale, dark, phase, true, clear),
                             output_size,
                         )?
                         .save(&independent)?;
@@ -224,15 +257,14 @@ mod comparison {
                     }
                     window.setContentView(Some(&content));
                     settle(&app, Duration::from_millis(800));
-                    println!(
-                        "capture preflight: window={}, visible={}, active={}, key={}, scale={scale}",
-                        window.windowNumber(),
-                        window.isVisible(),
-                        app.isActive(),
-                        window.isKeyWindow()
-                    );
                     for repeat in 0..2 {
                         let capture = directory.join(format!("{name}-capture{repeat}.png"));
+                        validate_capture_state(
+                            &format!("{name}-capture{repeat} before"),
+                            &app,
+                            &window,
+                            scale,
+                        )?;
                         let status = Command::new("/usr/sbin/screencapture")
                             .args(["-x", "-o", &format!("-l{}", window.windowNumber())])
                             .arg(&capture)
@@ -243,12 +275,13 @@ mod comparison {
                             "capture of owned window failed; verify the graphical session and screen recording permission"
                         );
                         settle(&app, Duration::from_millis(300));
+                        validate_capture_state(
+                            &format!("{name}-capture{repeat} after"),
+                            &app,
+                            &window,
+                            scale,
+                        )?;
                     }
-                    println!(
-                        "{name}: scale={scale}, key={}, window={}",
-                        window.isKeyWindow(),
-                        window.windowNumber()
-                    );
                 }
             }
         }

@@ -85,8 +85,9 @@ it is not a pure GPU timestamp or an interactive frame-rate claim.
 Run `cargo run -p gpui-cupertino --example glass --locked` in `devenv shell` for
 the interactive coordinate grid. Scroll and resize, reverse the toolbar spring
 before it settles, and toggle the appearance and accessibility overrides. Native
-Apple pixel equivalence is not claimed; collecting native reference windows and
-runtime parameter traces remains separate research.
+Apple pixel equivalence is not claimed. Native reference captures currently show
+visible differences in filtering, tone, and edge highlights; style calibration
+and runtime parameter traces remain separate research.
 
 See [validation results](validation.md) for the independent reference, repeated
 measurements, actual retained-animation checks, and native comparison procedure.
