@@ -165,6 +165,10 @@ fn outline(shape: GlassShape, bounds: Bounds<Pixels>) -> (u32, Bounds<Pixels>, P
 }
 
 #[cfg(test)]
+#[path = "materials/tests.rs"]
+mod element_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

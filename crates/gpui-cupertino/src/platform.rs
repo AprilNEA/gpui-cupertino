@@ -52,6 +52,14 @@ struct AccessibilityState {
 
 impl Global for AccessibilityState {}
 
+#[cfg(test)]
+pub(crate) fn set_test_preferences(cx: &mut App, preferences: AccessibilityPreferences) {
+    accessibility_preferences(cx);
+    cx.global_mut::<AccessibilityState>().preferences = preferences;
+    cx.set_reduce_motion(preferences.reduce_motion);
+    cx.refresh_windows();
+}
+
 /// Read system settings and subscribe to changes for the lifetime of the GPUI app.
 ///
 /// Call once during startup when using springs without a [`crate::materials::Glass`].

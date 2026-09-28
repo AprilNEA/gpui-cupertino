@@ -20,7 +20,7 @@ pub struct Backdrop {
     pub content_mask: ContentMask<ScaledPixels>,
     /// Rounded rectangle corner radius.
     pub corner_radius: ScaledPixels,
-    /// Target Gaussian standard deviation; the renderer approximates the kernel.
+    /// Standard deviation of a pixel-integrated Gaussian, truncated at four sigma.
     pub blur_sigma: ScaledPixels,
     /// Straight linear RGBA tint.
     pub tint: [f32; 4],
@@ -59,7 +59,7 @@ pub struct PaintBackdrop {
     pub bounds: Bounds<Pixels>,
     /// Rounded rectangle corner radius.
     pub corner_radius: Pixels,
-    /// Target Gaussian standard deviation; the renderer approximates the kernel.
+    /// Standard deviation of a pixel-integrated Gaussian, truncated at four sigma.
     pub blur_sigma: Pixels,
     /// Straight linear RGBA tint.
     pub tint: [f32; 4],

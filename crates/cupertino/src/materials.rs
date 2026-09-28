@@ -41,7 +41,8 @@ impl Default for Refraction {
 ///
 /// The default is an identity material: it leaves the captured background unchanged
 /// inside a rectangular outline. Blur specifies a target Gaussian standard deviation, not an
-/// uncalibrated platform blur radius; renderers may approximate the kernel. All lengths use logical pixels.
+/// uncalibrated platform blur radius. The Metal renderer convolves constant pixel
+/// cells with a continuous Gaussian and samples at pixel centers. All lengths use logical pixels.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GlassMaterialOptions {
     /// Analytic outline used for coverage and optical direction.

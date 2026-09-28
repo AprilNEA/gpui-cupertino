@@ -106,9 +106,17 @@ impl Scene {
 
     pub fn insert_primitive(&mut self, primitive: impl Into<Primitive>) {
         let mut primitive = primitive.into();
-        let clipped_bounds = primitive
-            .bounds()
-            .intersect(&primitive.content_mask().bounds);
+        let bounds = *primitive.bounds();
+        if bounds.is_empty() {
+            return;
+        }
+        let bounds = match &primitive {
+            // Keep a backdrop when only its antialias fringe reaches the clip.
+            #[cfg(target_os = "macos")]
+            Primitive::Backdrop(_) => bounds.dilate(ScaledPixels(1.0)),
+            _ => bounds,
+        };
+        let clipped_bounds = bounds.intersect(&primitive.content_mask().bounds);
 
         if clipped_bounds.is_empty() {
             return;

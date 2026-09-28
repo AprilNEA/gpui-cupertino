@@ -2716,6 +2716,13 @@ impl Window {
         self.rendered_frame.scene.quads.clone()
     }
 
+    /// Returns backdrop primitives from the most recently rendered frame.
+    /// Bounds and masks are in scaled pixels, matching [`Self::painted_quads`].
+    #[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
+    pub fn painted_backdrops(&self) -> Vec<crate::Backdrop> {
+        self.rendered_frame.scene.backdrops.clone()
+    }
+
     /// Returns the underlines in the most recently rendered frame's scene.
     #[cfg(any(test, feature = "test-support"))]
     pub fn painted_underlines(&self) -> Vec<Underline> {

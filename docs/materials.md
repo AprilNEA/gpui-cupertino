@@ -13,13 +13,19 @@ Replaying cached paint commands inserts a new boundary and takes a new snapshot,
 so scrolling and changing backgrounds do not reuse stale pixels. Consecutive
 glass elements compose in paint order: a later glass can see an earlier one.
 
-The Metal renderer ends its render pass, copies the window texture, and builds
-a linear RGB, half-float Gaussian scale pyramid. Each level applies a normalized,
-separable, seven-tap filter with doubled spacing. Levels keep their full spatial
-resolution: decimation caused asymmetric impulse responses and phase-dependent
-blur during scrolling. Only the two levels bracketing the requested `blur_sigma`
-are retained, and they are blended by variance. This is an explicit filter chain,
-not automatically generated mipmaps; its kernel approximates a Gaussian.
+The Metal renderer ends its render pass, copies the window texture, and decodes
+it into linear RGB, half-float storage. Uniform blur uses two separable Gaussian
+passes. Captured pixels are treated as constant unit cells: weights integrate a
+continuous Gaussian over each source cell, then sample at destination centers.
+The CPU computes weights with `libm::erf`; paired linear texture samples combine
+adjacent taps. Ordinary support ends at four standard deviations and is
+normalized. When the window edge limits support, the remaining tail is folded
+into clamp-to-edge taps.
+
+A previous scale-pyramid approximation failed the independent Gaussian oracle,
+particularly for small radii. Uniform blur now evaluates the requested kernel
+directly; variable-radius LOD remains future work. The background snapshot and
+two working textures use approximately 20 bytes per window pixel during blur.
 
 An analytic signed distance field defines circle, capsule, or rounded rectangle
 coverage. Refraction strength follows inward edge distance; optical direction
@@ -41,7 +47,7 @@ SwiftUI, private framework filter, or Apple shader binary is loaded.
 - Transparent window backdrops, HDR, desktop capture, and other applications'
   windows are outside this contract. Windows DirectX and WGPU need separate
   implementations and acceptance checks; WGPU rejects the backdrop primitive.
-- Each effect currently builds its own full-window snapshot and pyramid. Shared
+- Each effect currently builds its own full-window snapshot and filtered texture. Shared
   captures, cropping, and persistent caches require measured performance and
   dependency-aware invalidation before introduction.
 - Shapes are independent. A fused shape group needs a joint distance field and
@@ -70,7 +76,7 @@ Optical checks exercise refraction, dispersion, neighboring color bleed, and
 highlight scaling. A readback benchmark covers zero, one, and two effects:
 
 ```sh
-cargo bench -p gpui-cupertino --bench backdrop --profile dev --locked
+cargo bench -p gpui-cupertino --bench backdrop --locked
 ```
 
 This measures the full synchronous render/readback path, including host work;
@@ -81,3 +87,6 @@ the interactive coordinate grid. Scroll and resize, reverse the toolbar spring
 before it settles, and toggle the appearance and accessibility overrides. Native
 Apple pixel equivalence is not claimed; collecting native reference windows and
 runtime parameter traces remains separate research.
+
+See [validation results](validation.md) for the independent reference, repeated
+measurements, actual retained-animation checks, and native comparison procedure.

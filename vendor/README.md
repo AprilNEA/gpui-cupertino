@@ -6,7 +6,9 @@ Upstream licenses are retained. The workspace manifest retains the inherited
 dependency versions and lint settings for these crates.
 
 The local changes add ordered backdrop boundaries to GPUI and an independently
-written Metal material implementation to `gpui_apple`. Other source files are
+written Metal material implementation to `gpui_apple`. Spring animation uses
+GPUI's scheduler clock, enabling deterministic retargeting and frame-cadence
+checks. Test-only scene accessors support adapter acceptance checks. Other source files are
 kept at the pinned revision apart from whitespace cleanup. This source workspace is excluded from Cupertino's
 workspace so its upstream examples and tests are not library release targets.
 

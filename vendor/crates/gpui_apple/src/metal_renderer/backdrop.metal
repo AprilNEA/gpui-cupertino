@@ -19,32 +19,31 @@ kernel void backdrop_copy(texture2d<float, access::read> source [[texture(0)]], 
     float4 c = source.read(p);
     target.write(half4(float4(to_linear(c.rgb), c.a)), p);
 }
-// Truncated sigma=1 Gaussian, normalized including both symmetric sides.
-constant float weights[4] = {0.39905028, 0.24203623, 0.05400558, 0.00443305};
-kernel void backdrop_horizontal(texture2d<half> source [[texture(0)]], texture2d<half, access::write> target [[texture(1)]], constant uint &stride [[buffer(0)]], uint2 p [[thread_position_in_grid]]) {
+kernel void backdrop_horizontal(texture2d<half> source [[texture(0)]], texture2d<half, access::write> target [[texture(1)]], constant uint &count [[buffer(0)]], device const float2 *taps [[buffer(1)]], uint2 p [[thread_position_in_grid]]) {
     if (p.x >= target.get_width() || p.y >= target.get_height()) return;
     float2 extent(source.get_width(), source.get_height());
     float2 uv = (float2(p) + 0.5) / extent;
-    float4 c = float4(source.sample(filtered, uv)) * weights[0];
-    for (int i = 1; i <= 3; ++i) {
-        float2 delta(float(i * stride) / extent.x, 0);
-        c += (float4(source.sample(filtered, uv + delta)) + float4(source.sample(filtered, uv - delta))) * weights[i];
+    float4 c = float4(source.sample(filtered, uv)) * taps[0].y;
+    for (uint i = 1; i < count; ++i) {
+        float2 delta(taps[i].x / extent.x, 0);
+        c += (float4(source.sample(filtered, uv + delta)) + float4(source.sample(filtered, uv - delta))) * taps[i].y;
     }
     target.write(half4(c), p);
 }
-kernel void backdrop_vertical(texture2d<half> source [[texture(0)]], texture2d<half, access::write> target [[texture(1)]], constant uint &stride [[buffer(0)]], uint2 p [[thread_position_in_grid]]) {
+kernel void backdrop_vertical(texture2d<half> source [[texture(0)]], texture2d<half, access::write> target [[texture(1)]], constant uint &count [[buffer(0)]], device const float2 *taps [[buffer(1)]], uint2 p [[thread_position_in_grid]]) {
     if (p.x >= target.get_width() || p.y >= target.get_height()) return;
     float2 uv = (float2(p) + 0.5) / float2(target.get_width(), target.get_height());
-    float4 c = float4(source.sample(filtered, uv)) * weights[0];
-    for (int i = 1; i <= 3; ++i) {
-        float2 delta(0, float(i * stride) / source.get_height());
-        c += (float4(source.sample(filtered, uv + delta)) + float4(source.sample(filtered, uv - delta))) * weights[i];
+    float4 c = float4(source.sample(filtered, uv)) * taps[0].y;
+    for (uint i = 1; i < count; ++i) {
+        float2 delta(0, taps[i].x / source.get_height());
+        c += (float4(source.sample(filtered, uv + delta)) + float4(source.sample(filtered, uv - delta))) * taps[i].y;
     }
     target.write(half4(c), p);
 }
 vertex BackdropVertex backdrop_vertex(uint id [[vertex_id]], constant BackdropUniforms &u [[buffer(0)]]) {
     constexpr float2 corners[6] = {{0,0},{1,0},{0,1},{0,1},{1,0},{1,1}};
-    float2 p = u.bounds.xy + corners[id] * u.bounds.zw;
+    // The SDF's antialias fringe extends outside the geometric bounds.
+    float2 p = u.bounds.xy - 1 + corners[id] * (u.bounds.zw + 2);
     return {float4(p.x / u.viewport.x * 2 - 1, 1 - p.y / u.viewport.y * 2, 0, 1)};
 }
 float2 safe_direction(float2 v) {
@@ -69,17 +68,7 @@ float profile(float d, float width) {
     float t = saturate(-d / width);
     return 1 - sqrt(t * (2 - t));
 }
-float4 sample_blur(texture2d_array<half> source, float2 uv, float sigma, float max_level) {
-    constexpr float kernel_variance = 0.995912;
-    // The CPU selects the adjacent scales; recomputing LOD here could choose
-    // an overwritten slice when rounding near an integer scale boundary.
-    float high = max_level, low = max(0.0, high - 1);
-    float low_variance = kernel_variance * (pow(4.0, low) - 1) / 3;
-    float high_variance = kernel_variance * (pow(4.0, high) - 1) / 3;
-    float blend = high == low ? 0 : saturate((sigma*sigma - low_variance) / (high_variance - low_variance));
-    return mix(float4(source.sample(filtered, uv, uint(low) % 2)), float4(source.sample(filtered, uv, uint(high) % 2)), blend);
-}
-fragment float4 backdrop_fragment(BackdropVertex v [[stage_in]], constant BackdropUniforms &u [[buffer(0)]], texture2d<float> original [[texture(0)]], texture2d_array<half> pyramid [[texture(1)]]) {
+fragment float4 backdrop_fragment(BackdropVertex v [[stage_in]], constant BackdropUniforms &u [[buffer(0)]], texture2d<float> original [[texture(0)]], texture2d<half> material_source [[texture(1)]]) {
     float2 p = v.position.xy;
     if (any(p < u.clip.xy) || any(p >= u.clip.xy + u.clip.zw)) discard_fragment();
     float2 uv = p / u.viewport.xy;
@@ -93,17 +82,16 @@ fragment float4 backdrop_fragment(BackdropVertex v [[stage_in]], constant Backdr
     float2 direction = safe_direction(mix(field.yz, radial, u.optics.z));
     float edge = profile(field.x, u.optics.y);
     float2 refracted = uv + direction * edge * u.optics.x / u.viewport.xy;
-    float sigma = u.shape.z;
     float3 color;
     if (u.optics.w > 0) {
         constexpr float3 spectral[7] = {{0.5,0,0},{1.0/3,1.0/9,0},{1.0/6,2.0/9,0},{0,1.0/3,0},{0,2.0/9,1.0/6},{0,1.0/9,1.0/3},{0,0,0.5}};
         color = 0;
         for (int i=0; i<7; ++i) {
             float offset = 1.0 - float(i) / 3;
-            color += sample_blur(pyramid, refracted + offset * direction * edge * u.optics.w / u.viewport.xy, sigma, u.viewport.z).rgb * spectral[i];
+            color += float3(material_source.sample(filtered, refracted + offset * direction * edge * u.optics.w / u.viewport.xy).rgb) * spectral[i];
         }
     } else {
-        color = sample_blur(pyramid, refracted, sigma, u.viewport.z).rgb;
+        color = float3(material_source.sample(filtered, refracted).rgb);
     }
     float luminance = dot(color, float3(0.2126,0.7152,0.0722));
     color = mix(float3(luminance), color, u.color.x) + u.color.y;
@@ -111,7 +99,7 @@ fragment float4 backdrop_fragment(BackdropVertex v [[stage_in]], constant Backdr
     if (u.color.w > 0) {
         // ponytail: bleed shares the optical band; split its width when calibration requires it.
         float2 outside = uv + field.yz * (max(-field.x, 0.0) + u.viewport.w) / u.viewport.xy;
-        float3 bleed = sample_blur(pyramid, outside, sigma, u.viewport.z).rgb;
+        float3 bleed = float3(material_source.sample(filtered, outside).rgb);
         color = mix(color, bleed, u.color.w * edge * edge);
     }
     float highlight = saturate(1 + field.x / (1.5 * u.viewport.w)) * saturate(dot(field.yz, normalize(float2(-0.6,-0.8)))) * u.color.z;

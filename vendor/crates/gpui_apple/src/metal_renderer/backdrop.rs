@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 use gpui::{Backdrop, DevicePixels, Size};
-use metal::{MTLPixelFormat, MTLSize, MTLTextureType, MTLTextureUsage};
+use metal::{MTLPixelFormat, MTLResourceOptions, MTLSize, MTLTextureType, MTLTextureUsage};
 use std::{ffi::c_void, mem};
 
 /// Owns pipelines, while each ordered backdrop owns a fresh snapshot.
@@ -75,7 +75,7 @@ impl BackdropRenderer {
         backdrop: &Backdrop,
     ) {
         let (width, height) = (target.width(), target.height());
-        let snapshot = texture(device, width, height, None, target.pixel_format());
+        let snapshot = texture(device, width, height, target.pixel_format());
         let blit = command.new_blit_command_encoder();
         blit.copy_from_texture(
             target,
@@ -94,36 +94,26 @@ impl BackdropRenderer {
         );
         blit.end_encoding();
 
-        // Undecimated scales avoid phase shifts as content scrolls. The kernel
-        // variance is 2*sum(weight[i]*i*i), and stride doubles at each scale.
-        const KERNEL_VARIANCE: f64 = 0.995912;
-        let desired = (1.0 + 3.0 * f64::from(backdrop.blur_sigma.0).powi(2) / KERNEL_VARIANCE)
-            .log2()
-            .mul_add(0.5, 0.0)
-            .ceil() as u64;
-        let available = (width.max(height) as f32).log2().floor() as u64;
-        let levels = desired.min(available) + 1;
-        // Sigma is uniform per effect, so only the final adjacent scales are
-        // needed. Two full-resolution slices retain those scales by parity.
-        // ponytail: full-resolution filtering costs bandwidth; optimize only while preserving phase invariance.
-        let pyramid = texture(
-            device,
-            width,
-            height,
-            Some(levels.min(2)),
-            MTLPixelFormat::RGBA16Float,
-        );
-        let mut previous = layer(&pyramid, 0);
-        self.dispatch(command, &self.copy, &snapshot, &previous, 1);
-        if levels > 1 {
-            let horizontal = texture(device, width, height, None, MTLPixelFormat::RGBA16Float);
-            for level in 1..levels {
-                let stride = 1 << (level - 1);
-                self.dispatch(command, &self.horizontal, &previous, &horizontal, stride);
-                let next = layer(&pyramid, level % 2);
-                self.dispatch(command, &self.vertical, &horizontal, &next, stride);
-                previous = next;
-            }
+        let filtered = texture(device, width, height, MTLPixelFormat::RGBA16Float);
+        self.dispatch(command, &self.copy, &snapshot, &filtered, None);
+        if backdrop.blur_sigma.0 > 0.0 {
+            let horizontal = texture(device, width, height, MTLPixelFormat::RGBA16Float);
+            let horizontal_kernel = gaussian_kernel(device, backdrop.blur_sigma.0, width);
+            let vertical_kernel = gaussian_kernel(device, backdrop.blur_sigma.0, height);
+            self.dispatch(
+                command,
+                &self.horizontal,
+                &filtered,
+                &horizontal,
+                Some(&horizontal_kernel),
+            );
+            self.dispatch(
+                command,
+                &self.vertical,
+                &horizontal,
+                &filtered,
+                Some(&vertical_kernel),
+            );
         }
         let b = backdrop.bounds;
         let c = backdrop.content_mask.bounds;
@@ -149,12 +139,7 @@ impl BackdropRenderer {
                 backdrop.highlight,
                 backdrop.edge_bleed,
             ],
-            viewport: [
-                width as f32,
-                height as f32,
-                (levels - 1) as f32,
-                backdrop.scale_factor,
-            ],
+            viewport: [width as f32, height as f32, 0.0, backdrop.scale_factor],
         };
         let encoder = super::new_command_encoder_for_texture(command, target, size, None);
         encoder.set_render_pipeline_state(&self.composite);
@@ -169,7 +154,7 @@ impl BackdropRenderer {
             &uniforms as *const _ as *const c_void,
         );
         encoder.set_fragment_texture(0, Some(&snapshot));
-        encoder.set_fragment_texture(1, Some(&pyramid));
+        encoder.set_fragment_texture(1, Some(&filtered));
         encoder.draw_primitives(metal::MTLPrimitiveType::Triangle, 0, 6);
         encoder.end_encoding();
     }
@@ -180,17 +165,21 @@ impl BackdropRenderer {
         pipeline: &metal::ComputePipelineStateRef,
         input: &metal::TextureRef,
         output: &metal::TextureRef,
-        stride: u32,
+        kernel: Option<&metal::BufferRef>,
     ) {
         let encoder = command.new_compute_command_encoder();
         encoder.set_compute_pipeline_state(pipeline);
         encoder.set_texture(0, Some(input));
         encoder.set_texture(1, Some(output));
+        let tap_count = kernel.map_or(0, |buffer| {
+            buffer.length() / mem::size_of::<[f32; 2]>() as u64
+        }) as u32;
         encoder.set_bytes(
             0,
             mem::size_of::<u32>() as u64,
-            &stride as *const _ as *const c_void,
+            &tap_count as *const _ as *const c_void,
         );
+        encoder.set_buffer(1, kernel, 0);
         encoder.dispatch_thread_groups(
             MTLSize {
                 width: output.width().div_ceil(8),
@@ -211,19 +200,13 @@ fn texture(
     device: &metal::DeviceRef,
     width: u64,
     height: u64,
-    array_layers: Option<u64>,
     format: MTLPixelFormat,
 ) -> metal::Texture {
     let descriptor = metal::TextureDescriptor::new();
-    descriptor.set_texture_type(if array_layers.is_some() {
-        MTLTextureType::D2Array
-    } else {
-        MTLTextureType::D2
-    });
+    descriptor.set_texture_type(MTLTextureType::D2);
     descriptor.set_width(width);
     descriptor.set_height(height);
     descriptor.set_pixel_format(format);
-    descriptor.set_array_length(array_layers.unwrap_or(1));
     descriptor.set_storage_mode(metal::MTLStorageMode::Private);
     descriptor.set_usage(
         MTLTextureUsage::ShaderRead
@@ -233,17 +216,41 @@ fn texture(
     device.new_texture(&descriptor)
 }
 
-fn layer(texture: &metal::TextureRef, index: u64) -> metal::Texture {
-    texture.new_texture_view_from_slice(
-        texture.pixel_format(),
-        MTLTextureType::D2,
-        metal::NSRange {
-            location: 0,
-            length: 1,
-        },
-        metal::NSRange {
-            location: index,
-            length: 1,
-        },
+fn gaussian_kernel(device: &metal::DeviceRef, sigma: f32, extent: u64) -> metal::Buffer {
+    let sigma = f64::from(sigma);
+    let radius = (4.0 * sigma).ceil().min((extent - 1) as f64) as usize;
+    let inverse_width = 1.0 / (sigma * std::f64::consts::SQRT_2);
+    let mut weights: Vec<f64> = (0..=radius)
+        .map(|index| {
+            let offset = index as f64;
+            0.5 * (libm::erf((offset + 0.5) * inverse_width)
+                - libm::erf((offset - 0.5) * inverse_width))
+        })
+        .collect();
+    if radius == extent as usize - 1 {
+        // Beyond the axis extent every tap clamps to the same edge pixel.
+        // Fold that entire Gaussian tail into the last tap instead of dropping it.
+        weights[radius] +=
+            libm::erfc((radius as f64 + 0.5) * inverse_width) * if radius == 0 { 1.0 } else { 0.5 };
+    }
+    let total = weights[0] + 2.0 * weights[1..].iter().sum::<f64>();
+    let mut taps = vec![[0.0, (weights[0] / total) as f32]];
+    for index in (1..=radius).step_by(2) {
+        let near = weights[index];
+        let far = weights.get(index + 1).copied().unwrap_or(0.0);
+        let weight = near + far;
+        if weight > 0.0 {
+            taps.push([
+                (index as f64 + far / weight) as f32,
+                (weight / total) as f32,
+            ]);
+        }
+    }
+    // Linear sampling combines each adjacent pair exactly. A Metal buffer also
+    // handles large kernels beyond set_bytes' 4 KiB limit without unbounded allocation.
+    device.new_buffer_with_data(
+        taps.as_ptr().cast::<c_void>(),
+        mem::size_of_val(taps.as_slice()) as u64,
+        MTLResourceOptions::StorageModeShared,
     )
 }

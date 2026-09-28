@@ -139,3 +139,39 @@ fn fully_clipped_backdrop_does_not_create_a_barrier() {
         matches!(scene.batches().next(), Some(PrimitiveBatch::Quads(range)) if range == (0..2))
     );
 }
+
+#[test]
+fn empty_backdrop_does_not_create_a_barrier() {
+    for empty_size in [
+        size(ScaledPixels(0.), ScaledPixels(20.)),
+        size(ScaledPixels(10.), ScaledPixels(0.)),
+    ] {
+        let mut scene = Scene::default();
+        let mut empty = backdrop(100.);
+        empty.bounds.size = empty_size;
+        scene.insert_primitive(quad(0.));
+        scene.insert_primitive(empty);
+        scene.insert_primitive(quad(200.));
+        scene.finish();
+        assert!(scene.backdrops.is_empty(), "empty size {empty_size:?}");
+        assert_eq!(scene.len(), 2);
+        assert!(
+            matches!(scene.batches().next(), Some(PrimitiveBatch::Quads(range)) if range == (0..2))
+        );
+    }
+}
+
+#[test]
+fn backdrop_keeps_antialias_fringe_inside_clip() {
+    let mut scene = Scene::default();
+    let mut glass = backdrop(10.75);
+    glass.content_mask.bounds = bounds(0., 10.6);
+    scene.insert_primitive(glass);
+    scene.finish();
+    assert_eq!(scene.backdrops.len(), 1);
+    assert_eq!(scene.backdrops[0].bounds, bounds(10.75, 10.));
+    assert!(matches!(
+        scene.batches().next(),
+        Some(PrimitiveBatch::Backdrop(0))
+    ));
+}
