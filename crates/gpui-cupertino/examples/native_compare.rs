@@ -1,9 +1,14 @@
 //! Capture inactive AppKit glass beside a deterministic Metal readback on the same background.
 //! Run on macOS 26+: `cargo run -p gpui-cupertino --example native_compare -- work/comparison`.
+//! Isolate one case with `OUT probe --background step:v --shape roundrect --appearance light --style regular`.
+
+#[cfg(target_os = "macos")]
+#[path = "native_compare/probe.rs"]
+mod probe;
 
 #[cfg(target_os = "macos")]
 mod comparison {
-    use anyhow::{Context, Result, ensure};
+    use anyhow::{Context, Result, bail, ensure};
     use gpui::{
         Backdrop, Bounds, ContentMask, DevicePixels, PlatformHeadlessRenderer, Quad, ScaledPixels,
         Scene, point, rgb, size,
@@ -22,8 +27,8 @@ mod comparison {
         time::{Duration, Instant},
     };
 
-    const WIDTH: f32 = 384.0;
-    const HEIGHT: f32 = 320.0;
+    pub(super) const WIDTH: f32 = 384.0;
+    pub(super) const HEIGHT: f32 = 320.0;
     const SHAPES: [[f32; 5]; 3] = [
         [24.0, 24.0, 336.0, 72.0, 20.0],
         [24.0, 136.0, 200.0, 64.0, 32.0],
@@ -128,6 +133,70 @@ mod comparison {
         }
     }
 
+    fn appearance(app: &NSApplication, dark: bool) -> Result<()> {
+        let appearance = NSAppearance::appearanceNamed(&NSString::from_str(if dark {
+            "NSAppearanceNameDarkAqua"
+        } else {
+            "NSAppearanceNameAqua"
+        }))
+        .context("loading AppKit appearance")?;
+        app.setAppearance(Some(&appearance));
+        Ok(())
+    }
+
+    fn add_glass(
+        native: &NSImageView,
+        [x, y, w, h, radius]: [f32; 5],
+        clear: bool,
+        mtm: MainThreadMarker,
+    ) {
+        let glass = NSGlassEffectView::initWithFrame(
+            NSGlassEffectView::alloc(mtm),
+            rect(x.into(), (HEIGHT - y - h).into(), w.into(), h.into()),
+        );
+        glass.setCornerRadius(radius.into());
+        glass.setStyle(if clear {
+            NSGlassEffectViewStyle::Clear
+        } else {
+            NSGlassEffectViewStyle::Regular
+        });
+        glass.setContentView(Some(&NSView::initWithFrame(
+            NSView::alloc(mtm),
+            rect(0.0, 0.0, w.into(), h.into()),
+        )));
+        native.addSubview(&glass);
+    }
+
+    fn capture(app: &NSApplication, window: &NSWindow, prefix: &Path, scale: f64) -> Result<()> {
+        settle(app, Duration::from_millis(800));
+        // Launch activation can arrive during the first event-loop drain.
+        app.deactivate();
+        settle(app, Duration::from_millis(800));
+        for repeat in 0..2 {
+            let path = prefix.with_file_name(format!(
+                "{}-capture{repeat}.png",
+                prefix
+                    .file_name()
+                    .context("capture prefix needs a name")?
+                    .to_str()
+                    .context("capture name must be UTF-8")?
+            ));
+            validate_capture_state(&format!("{} before", path.display()), app, window, scale)?;
+            let status = Command::new("/usr/sbin/screencapture")
+                .args(["-x", "-o", &format!("-l{}", window.windowNumber())])
+                .arg(&path)
+                .status()
+                .context("capturing the owned reference window")?;
+            ensure!(
+                status.success(),
+                "capture of owned window failed; verify the graphical session and screen recording permission"
+            );
+            settle(app, Duration::from_millis(300));
+            validate_capture_state(&format!("{} after", path.display()), app, window, scale)?;
+        }
+        Ok(())
+    }
+
     fn validate_capture_state(
         label: &str,
         app: &NSApplication,
@@ -165,9 +234,15 @@ mod comparison {
             objc2::available!(macos = 26.0),
             "native glass comparison requires macOS 26 or later"
         );
-        let directory = std::env::args()
-            .nth(1)
-            .context("supply an output directory")?;
+        let mut args = std::env::args().skip(1);
+        let directory = args.next().context("supply an output directory")?;
+        let probe = match args.next().as_deref() {
+            None => None,
+            Some("probe") => Some(super::probe::Probe::parse(args)?),
+            Some(mode) => bail!(
+                "unknown mode {mode}; use OUT or OUT probe --background ... --shape ... --appearance ... --style ..."
+            ),
+        };
         let directory = Path::new(&directory);
         std::fs::create_dir_all(directory)?;
         let mtm = MainThreadMarker::new().context("reference app must run on the main thread")?;
@@ -201,14 +276,35 @@ mod comparison {
             DevicePixels((WIDTH * render_scale) as i32),
             DevicePixels((HEIGHT * render_scale) as i32),
         );
+        if let Some(probe) = probe {
+            appearance(&app, probe.dark)?;
+            window.setTitle(&NSString::from_str(
+                "Native AppKit probe (left) | Same input, no glass (right)",
+            ));
+            let name = probe.name();
+            let background = directory.join(format!("{name}-background.png"));
+            probe.save_background(&mut renderer, render_scale, &background)?;
+            let content = NSView::initWithFrame(
+                NSView::alloc(mtm),
+                rect(0.0, 0.0, (WIDTH * 2.0).into(), HEIGHT.into()),
+            );
+            let native = image_view(&background, 0.0, mtm)?;
+            content.addSubview(&native);
+            let control = image_view(&background, WIDTH.into(), mtm)?;
+            content.addSubview(&control);
+            add_glass(&native, probe.geometry(), probe.clear, mtm);
+            window.setContentView(Some(&content));
+            probe.save_metadata(
+                directory,
+                scale,
+                window.frame().size.height - f64::from(HEIGHT),
+            )?;
+            capture(&app, &window, &directory.join(name), scale)?;
+            window.orderOut(None);
+            return Ok(());
+        }
         for dark in [false, true] {
-            let appearance = NSAppearance::appearanceNamed(&NSString::from_str(if dark {
-                "NSAppearanceNameDarkAqua"
-            } else {
-                "NSAppearanceNameAqua"
-            }))
-            .context("loading AppKit appearance")?;
-            app.setAppearance(Some(&appearance));
+            appearance(&app, dark)?;
             for clear in [false, true] {
                 for phase in [0, 7] {
                     let name = format!(
@@ -238,50 +334,11 @@ mod comparison {
                     content.addSubview(&native);
                     let metal = image_view(&independent, WIDTH.into(), mtm)?;
                     content.addSubview(&metal);
-                    for [x, y, w, h, radius] in SHAPES {
-                        let glass = NSGlassEffectView::initWithFrame(
-                            NSGlassEffectView::alloc(mtm),
-                            rect(x.into(), (HEIGHT - y - h).into(), w.into(), h.into()),
-                        );
-                        glass.setCornerRadius(radius.into());
-                        glass.setStyle(if clear {
-                            NSGlassEffectViewStyle::Clear
-                        } else {
-                            NSGlassEffectViewStyle::Regular
-                        });
-                        glass.setContentView(Some(&NSView::initWithFrame(
-                            NSView::alloc(mtm),
-                            rect(0.0, 0.0, w.into(), h.into()),
-                        )));
-                        native.addSubview(&glass);
+                    for shape in SHAPES {
+                        add_glass(&native, shape, clear, mtm);
                     }
                     window.setContentView(Some(&content));
-                    settle(&app, Duration::from_millis(800));
-                    for repeat in 0..2 {
-                        let capture = directory.join(format!("{name}-capture{repeat}.png"));
-                        validate_capture_state(
-                            &format!("{name}-capture{repeat} before"),
-                            &app,
-                            &window,
-                            scale,
-                        )?;
-                        let status = Command::new("/usr/sbin/screencapture")
-                            .args(["-x", "-o", &format!("-l{}", window.windowNumber())])
-                            .arg(&capture)
-                            .status()
-                            .context("capturing the owned reference window")?;
-                        ensure!(
-                            status.success(),
-                            "capture of owned window failed; verify the graphical session and screen recording permission"
-                        );
-                        settle(&app, Duration::from_millis(300));
-                        validate_capture_state(
-                            &format!("{name}-capture{repeat} after"),
-                            &app,
-                            &window,
-                            scale,
-                        )?;
-                    }
+                    capture(&app, &window, &directory.join(name), scale)?;
                 }
             }
         }

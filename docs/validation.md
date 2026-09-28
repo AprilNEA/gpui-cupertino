@@ -176,3 +176,95 @@ would not establish a reusable match.
 Local captures and logs are in `work/comparison-inactive-{1,2,3}` and
 `work/native-inactive-{1,2,3}.log`; diagnostic JSON files sit beside those
 directories. `work/` is ignored and is not part of the distributed library.
+
+## Isolated calibration probes
+
+The comparison example also places a single native shape beside the same input
+without glass. This separates color response, filtering, and displacement:
+
+```sh
+devenv shell -- cargo run -p gpui-cupertino --example native_compare --locked -- \
+  work/probes probe --background step:v --shape roundrect --appearance light --style regular
+```
+
+All four probe options are required. Backgrounds are `solid:RRGGBB`, `step:h`,
+`step:v`, `ramp`, or `checker:N[:phase]`. Shapes are `roundrect`, `capsule`, and
+`circle`; appearances are `light`/`dark`; styles are `regular`/`clear`. The ramp
+encodes x in red, y in green, and constant 128 in blue. Checker cells and phase
+use logical pixels. Each case writes the exact input PNG, two captures, and JSON
+containing geometry, scale, and the measured title-bar offset. State checks apply
+to every capture. Launch activation is drained before setting the inactive
+measurement state; checks are never bypassed when the state is wrong.
+
+The first isolation matrix contains 68 cases and 136 successful captures:
+five grays, three primaries, two appearance-specific checker colors, two step
+directions, a coordinate ramp, and two checker phases for each style/appearance;
+capsule and circle ramps supplement the rounded rectangle. Phase 7 and the
+checker colors must remain independent validation inputs when parameters are
+identified from pure colors and steps.
+
+The calibration target is matched-state output within the native repeatability
+envelope (currently at most one encoded level per channel), including edges,
+across independent inputs. The current renderer has not met that target. A
+smaller average error on a training checkerboard is not sufficient acceptance.
+
+Local read-only research also inspected actual objects attached to an owned
+native view, rather than assuming that an on-disk recipe was selected. For an
+inactive 256×128 logical-pixel rectangle with radius 20, the observed backdrop
+capture scales were 0.25 for regular and 0.5 for clear. Their filter blur-radius
+inputs were approximately 3.428571 and 10 respectively. These values are **not
+Gaussian sigma**, and do not establish the final GPU buffer or sampler mapping.
+
+Six geometry configurations showed that changing radius 20→64 at a fixed
+256×128 size did not change those inputs. Changing the short dimension did:
+
+| Short dimension | Regular blur-radius input | Clear blur-radius input |
+| --- | ---: | ---: |
+| 64 | 2.285714 | 6.111111 |
+| 72 | 2.428571 | 6.666667 |
+| 96 | 2.857143 | 8.333333 |
+| 128 | 3.428571 | 10 |
+
+All sampled widths were at least their heights; these observations cannot yet
+distinguish height from minimum-dimension dependence. This is a measured range,
+not a universal interpolation rule. The inactive
+key/fill highlight layer had zero opacity and zero color alpha, whereas the
+demo used a nonzero directional highlight. The observed refraction-opacity
+input of zero does not establish that all inner refraction is disabled: the
+archived shader has a separate branch flag that has not been traced to final
+uniforms.
+
+Color-managed measurements found zero difference in every far-background
+control region, and at most one encoded level of repeat noise. A proposed
+per-channel formula using the observed white/black/fill inputs reproduced all
+five grays within one level, but failed every colored validation input. Worst
+channel errors were 43.125 (light regular), 85.55 (dark regular), 18.40 (light
+clear), and 48.45 (dark clear). Applying that same formula in linear RGB was
+worse. For example, light regular over pure green predicted [172,247,172] but
+measured [129,255,139]. No preset was accepted from this falsified model.
+
+Using independently captured black/white outputs as threshold endpoints,
+the step probes gave the following 10–90% output linear-luminance widths. Both
+axes and both repeats agreed at the displayed precision. These widths include
+the native color response and must not be labeled Gaussian sigma.
+
+| Appearance / style | Transition width, logical pixels |
+| --- | ---: |
+| Light / regular | 21.228 |
+| Dark / regular | 18.912 |
+| Light / clear | 47.858 |
+| Dark / clear | 44.727 |
+
+Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
+edge band, while the central slope remained positive. The reversed region moved
+with the circle boundary; this cannot be explained by one position-independent
+color mapping. It is evidence of spatial optical behavior, but the unresolved
+RGB response prevents a reliable conversion to source displacement in pixels.
+
+No private filter calls, system shader binaries, or host recipes are used by the
+library. Local inspection tools, raw logs, and provenance remain in the ignored
+research directory. Mathematical fitting is pending a SciPy-enabled analysis
+environment; acquisition and fixed-formula verification are independent of it.
+Active-window inspection was attempted but rejected by its state assertions;
+the graphical session was independently confirmed locked. No active-state
+parameter result is claimed from those attempts.
