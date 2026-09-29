@@ -467,6 +467,56 @@ are preserved in `internal-docs/research/clear-2d-edge-prospective-2026-09-29`
 and `internal-docs/research/clear-grid-translation-2026-09-29`. No product
 renderer or Gaussian-contract change follows from these research results.
 
+The repeat discrepancy was subsequently investigated with six fixed cases and
+16 frames per case. The late comparison interval was declared before capture:
+frames 8–15 against frame 8, all at least three seconds after deactivation.
+All 96 images and their timing/state logs were retained. Early frames differed
+by as much as 20 encoded levels; every predetermined late comparison was
+byte-identical across the entire native panel, including corners and regions
+outside the sampled edge bands. Independent analysis reproduced the result.
+This identifies a capture-timing problem, without identifying which AppKit or
+compositor transition caused it. The probe now waits a fixed five seconds after
+deactivation before its first capture; it does not select frames or disable
+native animations. The old failed captures remain unchanged.
+
+Numerical diagnostics on all 27 earlier two-dimensional cases retained the
+same 54 center regions, 200 edge bands, and continuous one-level limit.
+Explicit half arithmetic, high-precision ColorSync input, alternative color
+conversion order, and intermediate UNORM8 storage did not produce a model that
+passed every region. Some reduced the average error while increasing the worst
+error or the number of failed regions. Those results do not justify a renderer
+change or a weaker acceptance limit. Timing evidence is in
+`internal-docs/research/clear-settling-2026-09-29`; numerical diagnostics are in
+the adjacent `clear-precision`, `clear-color-domain`, `clear-color-stage`, and
+`clear-storage` directories dated 2026-09-29.
+
+Independent public Metal programs then tested actual GPU mip computation and
+final float sampling/refraction with statically derived half face matrices.
+The matrix derivation reproduced six system CPU matrix compositions
+byte-for-byte on owned inputs. Synthetic texel, LOD, clamp, displacement, and
+repeat checks passed. Neither RGBA16Float nor RGBA8Unorm produced a uniformly
+passing native model: the complete GPU float-final candidates reached maximum
+center/edge errors of 1.367/1.277 and 1.618/1.344, respectively. All 254 earlier
+baseline regions were reproduced. These conditional implementations do not
+identify the native frame's shader variant, working color domain, actual
+texture format, or final output conversion. Sources, raw GPU readbacks, and
+failed comparisons are retained in `clear-metal-compute-2026-09-29` and
+`clear-metal-final-2026-09-29` under the same research directory.
+
+A new 12-case batch froze 592 inputs before acquisition, including all 13 model
+columns and the five-second capture protocol. All 24 original images passed
+source, ICC, timing, 48 native-state and 24 unlocked-session checks. Both the
+declared ROIs and the entire native panel were byte-identical between each
+pair, independently confirmed from raw RGBA. Repeat stability therefore passed
+on this unseen batch. Optical acceptance still failed for every model. The
+primary's eight gray center regions and 32 gray edge bands all passed, but a
+new orange/blue palette exposed maximum errors of 4.404 in the center and
+3.993 at an edge. Default-color and ramp failures also remain. The deep-center
+counterexample cannot be attributed solely to edge refraction or repeat noise;
+the color response and filtering domain still require isolation. The frozen
+primary, every failed column, raw captures and GPU outputs are retained in
+`internal-docs/research/clear-stable-prospective-2026-09-29`.
+
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
 with the circle boundary; this cannot be explained by one position-independent
