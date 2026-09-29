@@ -1,6 +1,9 @@
 //! Capture inactive AppKit glass beside a deterministic Metal readback on the same background.
 //! Run on macOS 26+: `cargo run -p gpui-cupertino --example native_compare -- work/comparison`.
 //! Isolate one case with `OUT probe --background step:v --shape roundrect --appearance light --style regular`.
+//! Optional `--size WIDTHxHEIGHT` centers the shape; circles require equal dimensions.
+//! `step:v[:phase]` / `step:h[:phase]` shift the edge right/down in half-logical-pixel increments.
+//! Step boundaries must map exactly to device pixels at the current display scale.
 
 #[cfg(target_os = "macos")]
 #[path = "native_compare/probe.rs"]

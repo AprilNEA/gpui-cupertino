@@ -187,11 +187,21 @@ devenv shell -- cargo run -p gpui-cupertino --example native_compare --locked --
   work/probes probe --background step:v --shape roundrect --appearance light --style regular
 ```
 
-All four probe options are required. Backgrounds are `solid:RRGGBB`, `step:h`,
-`step:v`, `ramp`, or `checker:N[:phase]`. Shapes are `roundrect`, `capsule`, and
+All four probe options are required. Backgrounds are `solid:RRGGBB`, `step:h[:phase]`,
+`step:v[:phase]`, `ramp`, or `checker:N[:phase]`. Shapes are `roundrect`, `capsule`, and
 `circle`; appearances are `light`/`dark`; styles are `regular`/`clear`. The ramp
 encodes x in red, y in green, and constant 128 in blue. Checker cells and phase
-use logical pixels. Each case writes the exact input PNG, two captures, and JSON
+use integer logical pixels. Step phase is a signed offset from the panel center,
+in half-logical-pixel increments; positive moves right/down. A step must fall
+strictly inside the panel and exactly on a device-pixel boundary at the capture
+scale. Optional `--size WIDTHxHEIGHT` centers integer dimensions within the
+384×320 panel. Rounded rectangles use radius `min(20, short_side / 2)`, capsules
+use `short_side / 2`, and circles require equal dimensions. Defaults remain
+256×128 for rectangles/capsules and 128×128 for circles. Nondefault dimensions
+and nonzero phases distinguish output names; equivalent default inputs retain
+the original names.
+
+Each case writes the exact input PNG, two captures, and JSON
 containing geometry, scale, and the measured title-bar offset. State checks apply
 to every capture. Launch activation is drained before setting the inactive
 measurement state; checks are never bypassed when the state is wrong.
