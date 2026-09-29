@@ -191,7 +191,11 @@ All four probe options are required. Backgrounds are `solid:RRGGBB`, `step:h[:ph
 `step:v[:phase]`, `ramp`, or `checker:N[:phase]`. Shapes are `roundrect`, `capsule`, and
 `circle`; appearances are `light`/`dark`; styles are `regular`/`clear`. The ramp
 encodes x in red, y in green, and constant 128 in blue. Checker cells and phase
-use integer logical pixels. Step phase is a signed offset from the panel center,
+use integer logical pixels. `checker:N:phase:RRGGBB:RRGGBB` supplies explicit
+colors independent of appearance, for example `checker:32:7:000000:ffffff`.
+At phase zero the top-left cell uses the first color. Metadata records the
+actual colors, and explicit colors distinguish output names.
+Step phase is a signed offset from the panel center,
 in half-logical-pixel increments; positive moves right/down. A step must fall
 strictly inside the panel and exactly on a device-pixel boundary at the capture
 scale. Optional `--size WIDTHxHEIGHT` centers integer dimensions within the

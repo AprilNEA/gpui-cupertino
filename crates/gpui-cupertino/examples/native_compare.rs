@@ -4,6 +4,11 @@
 //! Optional `--size WIDTHxHEIGHT` centers the shape; circles require equal dimensions.
 //! `step:v[:phase]` / `step:h[:phase]` shift the edge right/down in half-logical-pixel increments.
 //! Step boundaries must map exactly to device pixels at the current display scale.
+//! `checker:N:phase:RRGGBB:RRGGBB` uses explicit colors; `checker:N[:phase]` keeps appearance palettes.
+
+#[cfg(target_os = "macos")]
+#[path = "native_compare/background.rs"]
+mod background;
 
 #[cfg(target_os = "macos")]
 #[path = "native_compare/probe.rs"]
