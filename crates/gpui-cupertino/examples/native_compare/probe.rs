@@ -36,6 +36,7 @@ pub(super) struct Probe {
     background: Background,
     shape: Shape,
     dimensions: [u32; 2],
+    offset: [i32; 2],
     pub(super) dark: bool,
     pub(super) clear: bool,
 }
@@ -43,7 +44,7 @@ pub(super) struct Probe {
 impl Probe {
     pub(super) fn parse(mut args: impl Iterator<Item = String>) -> Result<Self> {
         let (mut background, mut shape, mut dark, mut clear) = (None, None, None, None);
-        let mut dimensions = None;
+        let (mut dimensions, mut offset) = (None, None);
         while let Some(flag) = args.next() {
             let value = args
                 .next()
@@ -77,6 +78,14 @@ impl Probe {
                         "duplicate --size"
                     );
                 }
+                "--offset" => {
+                    let (dx, dy) = value
+                        .split_once(',')
+                        .context("offset must be DX,DY in integer logical pixels")?;
+                    let dx = dx.parse().context("invalid horizontal offset")?;
+                    let dy = dy.parse().context("invalid vertical offset")?;
+                    ensure!(offset.replace([dx, dy]).is_none(), "duplicate --offset");
+                }
                 "--appearance" => {
                     let value = match value.as_str() {
                         "light" => false,
@@ -102,13 +111,20 @@ impl Probe {
             !matches!(shape, Shape::Circle) || dimensions[0] == dimensions[1],
             "circle size must have equal width and height"
         );
-        Ok(Self {
+        let probe = Self {
             background: background.context("probe requires --background")?,
             shape,
             dimensions,
+            offset: offset.unwrap_or([0, 0]),
             dark: dark.context("probe requires --appearance")?,
             clear: clear.context("probe requires --style")?,
-        })
+        };
+        let [x, y, width, height, _] = probe.geometry();
+        ensure!(
+            x >= 0.0 && y >= 0.0 && x + width <= WIDTH && y + height <= HEIGHT,
+            "offset shape must fit inside the 384x320 panel"
+        );
+        Ok(probe)
     }
 
     pub(super) fn name(&self) -> String {
@@ -117,8 +133,13 @@ impl Probe {
         } else {
             format!("-{}x{}", self.dimensions[0], self.dimensions[1])
         };
+        let offset = if self.offset == [0, 0] {
+            String::new()
+        } else {
+            format!("-offset{}x{}", self.offset[0], self.offset[1])
+        };
         format!(
-            "probe-{}-{}-{}{size}-{}",
+            "probe-{}-{}-{}{size}{offset}-{}",
             if self.dark { "dark" } else { "light" },
             if self.clear { "clear" } else { "regular" },
             self.shape.name(),
@@ -134,8 +155,8 @@ impl Probe {
             Shape::Capsule | Shape::Circle => half_short_side,
         };
         [
-            (WIDTH - width) / 2.0,
-            (HEIGHT - height) / 2.0,
+            (WIDTH - width) / 2.0 + self.offset[0] as f32,
+            (HEIGHT - height) / 2.0 + self.offset[1] as f32,
             width,
             height,
             radius,
@@ -294,6 +315,74 @@ mod tests {
             "probe-light-clear-roundrect-128x96-step-v-phase0.5"
         );
         Ok(())
+    }
+
+    #[test]
+    fn offset_moves_only_glass_and_names_identify_effective_translation() -> Result<()> {
+        for (offset, expected) in [
+            ("-8,0", [64.0, 96.0, 240.0, 128.0, 20.0]),
+            ("0,8", [72.0, 104.0, 240.0, 128.0, 20.0]),
+            ("-72,-96", [0.0, 0.0, 240.0, 128.0, 20.0]),
+            ("72,96", [144.0, 192.0, 240.0, 128.0, 20.0]),
+        ] {
+            let translated = probe(
+                "roundrect",
+                "checker:32:13:000000:ffffff",
+                &["--offset", offset, "--size", "240x128"],
+            )?;
+            assert_eq!(translated.geometry(), expected);
+            assert_eq!(
+                translated.background.pixel([37, 0], [768, 640], 2.0, false),
+                [0, 0, 0, 255]
+            );
+            assert_eq!(
+                translated.background.pixel([38, 0], [768, 640], 2.0, false),
+                [255; 4]
+            );
+        }
+        assert_eq!(
+            probe(
+                "roundrect",
+                "checker:32:13:000000:ffffff",
+                &["--size", "240x128", "--offset", "-8,0"],
+            )?
+            .name(),
+            "probe-light-clear-roundrect-240x128-offset-8x0-checker-32-phase13-000000-ffffff"
+        );
+        let original = probe("roundrect", "step:v", &[])?;
+        let zero = probe("roundrect", "step:v", &["--offset", "-0,0"])?;
+        assert_eq!(zero.geometry(), original.geometry());
+        assert_eq!(zero.name(), original.name());
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_offsets_fail_instead_of_clamping() {
+        for value in [
+            "1",
+            "1,2,3",
+            "0.5,0",
+            "NaN,0",
+            "0,inf",
+            "2147483648,0",
+            "-65,0",
+            "65,0",
+            "0,-97",
+            "0,97",
+        ] {
+            assert!(
+                probe("roundrect", "step:v", &["--offset", value]).is_err(),
+                "accepted {value}"
+            );
+        }
+        assert!(
+            probe(
+                "roundrect",
+                "step:v",
+                &["--offset", "0,0", "--offset", "0,0"]
+            )
+            .is_err()
+        );
     }
 
     #[test]

@@ -2,6 +2,7 @@
 //! Run on macOS 26+: `cargo run -p gpui-cupertino --example native_compare -- work/comparison`.
 //! Isolate one case with `OUT probe --background step:v --shape roundrect --appearance light --style regular`.
 //! Optional `--size WIDTHxHEIGHT` centers the shape; circles require equal dimensions.
+//! Optional `--offset DX,DY` shifts only the glass by integer logical pixels within the panel.
 //! `step:v[:phase]` / `step:h[:phase]` shift the edge right/down in half-logical-pixel increments.
 //! Step boundaries must map exactly to device pixels at the current display scale.
 //! `checker:N:phase:RRGGBB:RRGGBB` uses explicit colors; `checker:N[:phase]` keeps appearance palettes.

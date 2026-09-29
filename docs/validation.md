@@ -201,9 +201,14 @@ strictly inside the panel and exactly on a device-pixel boundary at the capture
 scale. Optional `--size WIDTHxHEIGHT` centers integer dimensions within the
 384×320 panel. Rounded rectangles use radius `min(20, short_side / 2)`, capsules
 use `short_side / 2`, and circles require equal dimensions. Defaults remain
-256×128 for rectangles/capsules and 128×128 for circles. Nondefault dimensions
-and nonzero phases distinguish output names; equivalent default inputs retain
-the original names.
+256×128 for rectangles/capsules and 128×128 for circles. Optional `--offset DX,DY`
+translates the glass from that centered position by integer logical pixels;
+positive values move right/down, and the background stays fixed. The translated
+shape must remain entirely inside the panel. For example,
+`--size 240x128 --offset -8,0` places it at `[64, 96, 240, 128]`. Nonzero offsets add
+`-offset{dx}x{dy}` after the size in output names. Nondefault dimensions and nonzero
+background phases also distinguish names; equivalent default inputs, including
+`--offset 0,0`, retain the original names. Metadata records the actual glass bounds.
 
 Each case writes the exact input PNG, two captures, and JSON
 containing geometry, scale, and the measured title-bar offset. State checks apply
