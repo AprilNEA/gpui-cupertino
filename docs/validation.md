@@ -327,6 +327,52 @@ fitted baselines, not the minimax feasibility of every Gaussian parameter set.
 It is a one-dimensional inactive step-response model, not a recovered native
 blur implementation or validation on other shapes, settings, or full images.
 
+Clear's remaining residual led to a prospective phase/size experiment. All
+models were frozen before new pixels were inspected: six vertical phases
+(`0`, `0.5`, `1`, `1.5`, `2`, `3` logical pixels) at 256×128, horizontal phase 1
+in light and dark appearance, and vertical phases 0/1 at 256×96. Each condition
+was captured twice. The new phase-zero capture checks run consistency; it is
+not a previously unseen condition. The complete batch used the corrected
+AppKit application lifecycle described above. Forty window-state checks passed;
+input/control step boundaries, capture dimensions, and ICC profiles agreed.
+All ten repeated center strips were pixel-identical.
+
+The fixed recursive filter candidate uses the axis projection of a 13-point
+downsample kernel. Its five weights are
+`[0.05633544921875, 0.244384765625, 0.3985595703125, 0.244384765625, 0.05633544921875]`
+at offsets `[-4, -2, 0, 2, 4]` in the preceding level's texel coordinates.
+Each destination sample is centered at source index `2*k + 0.5`, with linear
+interpolation, implementing 2× downsampling. This candidate has **no fitted
+parameters**. For one interior level-four output node, the recovered source-domain
+kernel has unit mass, zero center offset, and variance 340.6640625 logical pixels
+squared, matching an independent moment calculation.
+
+The predeclared size rule uses effective pitch `1.6 * radius`: pitch 16 for
+the measured radius input 10, and pitches 8/16 with upper weight 0.7369655942
+for input 25/3 at height 96. The internal surface scale and actual mip index
+remain unidentified; this is a tested logical-coordinate model. A single-grid
+Gaussian and a Gaussian sampled at these mip levels were also frozen on the
+old light/vertical/phase-zero capture. The baseline and single-grid sigma scale
+with the radius input; the mip Gaussian's sigma scales with each level's pitch.
+Color coefficients remained fixed:
+
+| Response model | Maximum error, 256×128 | Maximum error, 256×96 | Profiles within one code |
+| --- | ---: | ---: | ---: |
+| Continuous Gaussian baseline | 2.532 | 3.353 | 0 / 20 |
+| Single-grid Gaussian | 1.325 | 3.038 | 4 / 20 |
+| Mip-level Gaussian | 1.325 | 1.139 | 6 / 20 |
+| Fixed recursive filter | **0.946** | **0.870** | **20 / 20** |
+
+Errors are maximum absolute single-channel Display RGB code differences;
+raw-pixel maxima equal the mean-strip maxima. No model or threshold changed
+after validation. The result supports this one-dimensional inactive Clear
+response across the measured phases, axes, appearances, and two sizes. It does
+not establish actual compute dispatch, a portable working color space,
+two-dimensional separability, contour optics, or active-state equivalence. The
+library's Gaussian contract is unchanged. Frozen models, prospective results,
+and plots are in `work/clear-grid-models-v2-2026-09-29`; independent capture
+checks are in `work/probes-phase-size-2026-09-29-validation.json`.
+
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
 with the circle boundary; this cannot be explained by one position-independent
