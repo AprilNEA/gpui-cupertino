@@ -293,6 +293,28 @@ and vertical widths and repeats agreed. The ratio of 10–90% to 25–75% width 
 Gaussian kernel; an equivalent sigma from one width alone would miss the
 observed transition shape.
 
+With the analysis environment available, a bounded least-squares comparison
+trained one Gaussian CDF and one generalized-normal CDF per material on only
+light/vertical/capture0. The window was fixed at ±40 logical pixels from the
+step, at least 24 pixels from the nearest contour. Color coefficients remained
+fixed. All other axis/appearance/repeat combinations were held out, with no
+parameter changes after validation:
+
+| Material | Response model | Holdout maximum code error | Holdout MAE |
+| --- | --- | ---: | ---: |
+| Regular | Gaussian | 1.735 | 0.484 |
+| Regular | Generalized normal | 0.878 | 0.302 |
+| Clear | Gaussian | 2.553 | 0.805 |
+| Clear | Generalized normal | 2.489 | 0.807 |
+
+Regular's generalized-normal response (`beta=1.454379`, `scale=9.697687`
+logical pixels) stayed within one raw Display RGB code value on all seven
+holdout profiles. Clear did not improve meaningfully; its residual structure
+persisted while the sampled step strips repeated exactly. This evaluates the
+fitted baselines, not the minimax feasibility of every Gaussian parameter set.
+It is a one-dimensional inactive step-response model, not a recovered native
+blur implementation or validation on other shapes, settings, or full images.
+
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
 with the circle boundary; this cannot be explained by one position-independent
