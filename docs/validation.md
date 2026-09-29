@@ -203,8 +203,10 @@ the original names.
 
 Each case writes the exact input PNG, two captures, and JSON
 containing geometry, scale, and the measured title-bar offset. State checks apply
-to every capture. Launch activation is drained before setting the inactive
-measurement state; checks are never bypassed when the state is wrong.
+to every capture. The example runs AppKit's application event loop; its delegate
+schedules preparation, deactivation, and both captures on separate turns.
+Deactivation has a five-second deadline. Checks before and after each screenshot
+are never bypassed when the state is wrong.
 
 The first isolation matrix contains 68 cases and 136 successful captures:
 five grays, three primaries, two appearance-specific checker colors, two step

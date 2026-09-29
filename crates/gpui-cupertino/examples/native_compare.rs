@@ -10,35 +10,30 @@
 mod probe;
 
 #[cfg(target_os = "macos")]
+#[path = "native_compare/lifecycle.rs"]
+mod lifecycle;
+
+#[cfg(target_os = "macos")]
 mod comparison {
-    use anyhow::{Context, Result, bail, ensure};
-    use gpui::{
-        Backdrop, Bounds, ContentMask, DevicePixels, PlatformHeadlessRenderer, Quad, ScaledPixels,
-        Scene, point, rgb, size,
-    };
-    use gpui_apple::metal_renderer::MetalHeadlessRenderer;
+    use anyhow::{Context, Result, ensure};
+    use gpui::{Backdrop, Bounds, ContentMask, Quad, ScaledPixels, Scene, point, rgb, size};
     use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, rc::Retained};
     use objc2_app_kit::{
-        NSAppearance, NSApplication, NSApplicationActivationPolicy, NSBackingStoreType,
-        NSEventMask, NSGlassEffectView, NSGlassEffectViewStyle, NSImage, NSImageScaling,
-        NSImageView, NSView, NSWindow, NSWindowStyleMask, NSWorkspace,
+        NSAppearance, NSApplication, NSGlassEffectView, NSGlassEffectViewStyle, NSImage,
+        NSImageScaling, NSImageView, NSView, NSWindow, NSWorkspace,
     };
-    use objc2_foundation::{NSDate, NSPoint, NSRect, NSSize, NSString};
-    use std::{
-        path::Path,
-        process::Command,
-        time::{Duration, Instant},
-    };
+    use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
+    use std::path::Path;
 
     pub(super) const WIDTH: f32 = 384.0;
     pub(super) const HEIGHT: f32 = 320.0;
-    const SHAPES: [[f32; 5]; 3] = [
+    pub(super) const SHAPES: [[f32; 5]; 3] = [
         [24.0, 24.0, 336.0, 72.0, 20.0],
         [24.0, 136.0, 200.0, 64.0, 32.0],
         [256.0, 120.0, 96.0, 96.0, 48.0],
     ];
 
-    fn rect(x: f64, y: f64, width: f64, height: f64) -> NSRect {
+    pub(super) fn rect(x: f64, y: f64, width: f64, height: f64) -> NSRect {
         NSRect::new(NSPoint::new(x, y), NSSize::new(width, height))
     }
 
@@ -49,7 +44,7 @@ mod comparison {
         )
     }
 
-    fn scene(scale: f32, dark: bool, phase: u32, glass: bool, clear: bool) -> Scene {
+    pub(super) fn scene(scale: f32, dark: bool, phase: u32, glass: bool, clear: bool) -> Scene {
         let mut scene = Scene::default();
         let frame = bounds(0.0, 0.0, WIDTH, HEIGHT, scale);
         // Integer-cell backgrounds provide identical input to both renderers.
@@ -104,7 +99,11 @@ mod comparison {
         scene
     }
 
-    fn image_view(path: &Path, x: f64, mtm: MainThreadMarker) -> Result<Retained<NSImageView>> {
+    pub(super) fn image_view(
+        path: &Path,
+        x: f64,
+        mtm: MainThreadMarker,
+    ) -> Result<Retained<NSImageView>> {
         let image = NSImage::initWithContentsOfFile(
             NSImage::alloc(),
             &NSString::from_str(path.to_str().context("image path must be UTF-8")?),
@@ -120,23 +119,7 @@ mod comparison {
         Ok(view)
     }
 
-    fn settle(app: &NSApplication, duration: Duration) {
-        let until = Instant::now() + duration;
-        while Instant::now() < until {
-            let deadline = NSDate::dateWithTimeIntervalSinceNow(0.01);
-            if let Some(event) = app.nextEventMatchingMask_untilDate_inMode_dequeue(
-                NSEventMask::Any,
-                Some(&deadline),
-                &NSString::from_str("kCFRunLoopDefaultMode"),
-                true,
-            ) {
-                app.sendEvent(&event);
-            }
-            app.updateWindows();
-        }
-    }
-
-    fn appearance(app: &NSApplication, dark: bool) -> Result<()> {
+    pub(super) fn appearance(app: &NSApplication, dark: bool) -> Result<()> {
         let appearance = NSAppearance::appearanceNamed(&NSString::from_str(if dark {
             "NSAppearanceNameDarkAqua"
         } else {
@@ -147,7 +130,7 @@ mod comparison {
         Ok(())
     }
 
-    fn add_glass(
+    pub(super) fn add_glass(
         native: &NSImageView,
         [x, y, w, h, radius]: [f32; 5],
         clear: bool,
@@ -170,37 +153,7 @@ mod comparison {
         native.addSubview(&glass);
     }
 
-    fn capture(app: &NSApplication, window: &NSWindow, prefix: &Path, scale: f64) -> Result<()> {
-        settle(app, Duration::from_millis(800));
-        // Launch activation can arrive during the first event-loop drain.
-        app.deactivate();
-        settle(app, Duration::from_millis(800));
-        for repeat in 0..2 {
-            let path = prefix.with_file_name(format!(
-                "{}-capture{repeat}.png",
-                prefix
-                    .file_name()
-                    .context("capture prefix needs a name")?
-                    .to_str()
-                    .context("capture name must be UTF-8")?
-            ));
-            validate_capture_state(&format!("{} before", path.display()), app, window, scale)?;
-            let status = Command::new("/usr/sbin/screencapture")
-                .args(["-x", "-o", &format!("-l{}", window.windowNumber())])
-                .arg(&path)
-                .status()
-                .context("capturing the owned reference window")?;
-            ensure!(
-                status.success(),
-                "capture of owned window failed; verify the graphical session and screen recording permission"
-            );
-            settle(app, Duration::from_millis(300));
-            validate_capture_state(&format!("{} after", path.display()), app, window, scale)?;
-        }
-        Ok(())
-    }
-
-    fn validate_capture_state(
+    pub(super) fn validate_capture_state(
         label: &str,
         app: &NSApplication,
         window: &NSWindow,
@@ -231,128 +184,11 @@ mod comparison {
         );
         Ok(())
     }
-
-    pub fn run() -> Result<()> {
-        ensure!(
-            objc2::available!(macos = 26.0),
-            "native glass comparison requires macOS 26 or later"
-        );
-        let mut args = std::env::args().skip(1);
-        let directory = args.next().context("supply an output directory")?;
-        let probe = match args.next().as_deref() {
-            None => None,
-            Some("probe") => Some(super::probe::Probe::parse(args)?),
-            Some(mode) => bail!(
-                "unknown mode {mode}; use OUT or OUT probe --background ... --shape ... --appearance ... --style ..."
-            ),
-        };
-        let directory = Path::new(&directory);
-        std::fs::create_dir_all(directory)?;
-        let mtm = MainThreadMarker::new().context("reference app must run on the main thread")?;
-        let app = NSApplication::sharedApplication(mtm);
-        ensure!(
-            app.setActivationPolicy(NSApplicationActivationPolicy::Regular),
-            "activating reference app policy"
-        );
-        app.finishLaunching();
-        // SAFETY: initialized on the main thread with a valid content rectangle and buffered backing.
-        let window = unsafe {
-            NSWindow::initWithContentRect_styleMask_backing_defer(
-                NSWindow::alloc(mtm),
-                rect(100.0, 200.0, (WIDTH * 2.0).into(), HEIGHT.into()),
-                NSWindowStyleMask::Titled,
-                NSBackingStoreType::Buffered,
-                false,
-            )
-        };
-        // SAFETY: Rust retains the window; AppKit must not release it again when closed.
-        unsafe { window.setReleasedWhenClosed(false) };
-        window.setTitle(&NSString::from_str(
-            "Native AppKit (left) | Cupertino demo parameters (right)",
-        ));
-        window.orderFront(None);
-        app.deactivate();
-        let scale = window.backingScaleFactor();
-        let render_scale = scale as f32;
-        let mut renderer = MetalHeadlessRenderer::new();
-        let output_size = size(
-            DevicePixels((WIDTH * render_scale) as i32),
-            DevicePixels((HEIGHT * render_scale) as i32),
-        );
-        if let Some(probe) = probe {
-            appearance(&app, probe.dark)?;
-            window.setTitle(&NSString::from_str(
-                "Native AppKit probe (left) | Same input, no glass (right)",
-            ));
-            let name = probe.name();
-            let background = directory.join(format!("{name}-background.png"));
-            probe.save_background(&mut renderer, render_scale, &background)?;
-            let content = NSView::initWithFrame(
-                NSView::alloc(mtm),
-                rect(0.0, 0.0, (WIDTH * 2.0).into(), HEIGHT.into()),
-            );
-            let native = image_view(&background, 0.0, mtm)?;
-            content.addSubview(&native);
-            let control = image_view(&background, WIDTH.into(), mtm)?;
-            content.addSubview(&control);
-            add_glass(&native, probe.geometry(), probe.clear, mtm);
-            window.setContentView(Some(&content));
-            probe.save_metadata(
-                directory,
-                scale,
-                window.frame().size.height - f64::from(HEIGHT),
-            )?;
-            capture(&app, &window, &directory.join(name), scale)?;
-            window.orderOut(None);
-            return Ok(());
-        }
-        for dark in [false, true] {
-            appearance(&app, dark)?;
-            for clear in [false, true] {
-                for phase in [0, 7] {
-                    let name = format!(
-                        "{}-{}-phase{phase}",
-                        if dark { "dark" } else { "light" },
-                        if clear { "clear" } else { "regular" }
-                    );
-                    let background = directory.join(format!("{name}-background.png"));
-                    let independent = directory.join(format!("{name}-metal.png"));
-                    renderer
-                        .render_scene_to_image(
-                            &scene(render_scale, dark, phase, false, clear),
-                            output_size,
-                        )?
-                        .save(&background)?;
-                    renderer
-                        .render_scene_to_image(
-                            &scene(render_scale, dark, phase, true, clear),
-                            output_size,
-                        )?
-                        .save(&independent)?;
-                    let content = NSView::initWithFrame(
-                        NSView::alloc(mtm),
-                        rect(0.0, 0.0, (WIDTH * 2.0).into(), HEIGHT.into()),
-                    );
-                    let native = image_view(&background, 0.0, mtm)?;
-                    content.addSubview(&native);
-                    let metal = image_view(&independent, WIDTH.into(), mtm)?;
-                    content.addSubview(&metal);
-                    for shape in SHAPES {
-                        add_glass(&native, shape, clear, mtm);
-                    }
-                    window.setContentView(Some(&content));
-                    capture(&app, &window, &directory.join(name), scale)?;
-                }
-            }
-        }
-        window.orderOut(None);
-        Ok(())
-    }
 }
 
 #[cfg(target_os = "macos")]
 fn main() -> anyhow::Result<()> {
-    comparison::run()
+    lifecycle::run()
 }
 
 #[cfg(not(target_os = "macos"))]
