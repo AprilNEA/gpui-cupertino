@@ -1,6 +1,6 @@
 # Foundation validation
 
-Measured on macOS 26.4 (25E246), Apple M5 Max, on 2026-09-28. These are
+Measured on macOS 26.4 (25E246), Apple M5 Max, on 2026-09-28–29. These are
 independent numerical and behavioral acceptance checks. They do not establish
 visual equivalence with Apple's native material styles.
 
@@ -420,6 +420,42 @@ evidence, scripts, and residual plots are retained under
 `internal-docs/research/clear-edge-2026-09-29`. These directories remain locally
 ignored research, and none of these diagnostic candidates changes the product
 renderer or establishes native equivalence.
+
+A frozen follow-up tested ten new phase/size conditions after an unlocked
+40-configuration host sweep confirmed the radius inputs. The glass-local grid
+candidate failed: maximum center/edge errors were 4.980 / 4.550 levels. A single
+post-observation diagnostic retained the background coordinate phase while
+keeping base-edge replication and every other parameter fixed. Errors fell to
+1.430 / 1.342, but colored checker and ramp failures remained. This diagnostic
+does not replace the original failed prospective result.
+
+A second experiment froze that background-grid candidate before collecting six
+new gray-checker conditions. All shapes remained 240×128; integer translations
+isolated grid phase from size. Both captures were scored independently, with
+unchanged depth ≥24 center ROIs and four depth 2–20 straight-edge bands:
+
+| Frozen candidate | Center maximum error | Edge maximum error | Center / edge regions within one level |
+| --- | ---: | ---: | ---: |
+| Background-grid full 13-point | **0.955** | **0.952** | **12/12 / 48/48** |
+| Glass-local full 13-point | 4.814 | 4.852 | 6/12 / 24/48 |
+| Background-grid separable projection | 9.261 | 8.506 | 0/12 / 0/48 |
+| Background-grid zero refraction | 0.955 | 73.710 | 12/12 / 0/48 |
+
+Aligned positions are consistency controls where the two grid candidates
+coincide. Discriminating translations support retaining source-coordinate phase
+instead of restarting at each glass origin. The center cannot distinguish
+refraction because it is outside the optical band. Neither the precise native
+coordinate frame nor the actual GPU dispatch, texture format, or working color
+space is identified by this fixed-window experiment.
+
+All input, ICC, geometry, and native/session checks passed. However, six bottom
+bands contained 90 repeat-differing pixels, each differing by at most one RGB
+level. The frozen zero-noise check and **overall acceptance remain failed**;
+model-error acceptance alone passed. Earlier color/ramp failures remain open.
+Plans, immutable model hashes, raw images, counterexamples, plots, and reports
+are preserved in `internal-docs/research/clear-2d-edge-prospective-2026-09-29`
+and `internal-docs/research/clear-grid-translation-2026-09-29`. No product
+renderer or Gaussian-contract change follows from these research results.
 
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
