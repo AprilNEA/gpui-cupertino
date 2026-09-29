@@ -517,6 +517,22 @@ the color response and filtering domain still require isolation. The frozen
 primary, every failed column, raw captures and GPU outputs are retained in
 `internal-docs/research/clear-stable-prospective-2026-09-29`.
 
+A prospective six-case solid-color isolation used the orange/blue endpoints
+and their exact source midpoint, with both appearances and two raw captures
+each. All state, source, ICC, five-second timing and complete native/control
+repeat gates passed. Every center was spatially uniform. The original Display
+face formula and the statically derived half coefficients both passed every
+center pixel, with maxima 0.520460 and 0.495239 respectively. Thus these solid
+colors do not reproduce the checker failure. A separate diagnostic allowed an
+arbitrary common RGB mixing fraction at every checker center pixel: even the
+best point on the measured pure-native endpoint segment left maximum errors
+of 3.846154 (light) and 3.932584 (dark). Changing only nonnegative normalized
+filter weights in captured Display codes cannot explain this counterexample;
+another working domain followed by a nonlinear output conversion remains
+possible. This diagnostic does not select a domain or pass optical acceptance.
+Raw captures, independent review and scripts are retained in
+`internal-docs/research/clear-solid-color-2026-09-29`.
+
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
 with the circle boundary; this cannot be explained by one position-independent
