@@ -210,10 +210,18 @@ shape must remain entirely inside the panel. For example,
 background phases also distinguish names; equivalent default inputs, including
 `--offset 0,0`, retain the original names. Metadata records the actual glass bounds.
 
-Each case writes the exact input PNG, two captures, and JSON
+Optional `--capture-count N` records 2 through 32 frames (default 2), with the
+existing 0.3-second delay after each capture completes. Nondefault counts append
+`-countN` to the case name. Every frame is listed in metadata and retained.
+`TIMING` JSON log lines record `elapsed_since_prepare_ms` from a monotonic clock
+at `deactivate`, `before_capture`, and `after_capture`; capture stages include the
+zero-based `repeat` index. `after_capture` records the screenshot process's
+successful return, before the delay and subsequent native state check.
+
+Each case writes the exact input PNG, its captures, and JSON
 containing geometry, scale, and the measured title-bar offset. State checks apply
 to every capture. The example runs AppKit's application event loop; its delegate
-schedules preparation, deactivation, and both captures on separate turns.
+schedules preparation, deactivation, and each capture on a separate turn.
 Deactivation has a five-second deadline. Checks before and after each screenshot
 are never bypassed when the state is wrong.
 

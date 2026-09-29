@@ -39,12 +39,14 @@ pub(super) struct Probe {
     offset: [i32; 2],
     pub(super) dark: bool,
     pub(super) clear: bool,
+    pub(super) capture_count: u32,
 }
 
 impl Probe {
     pub(super) fn parse(mut args: impl Iterator<Item = String>) -> Result<Self> {
         let (mut background, mut shape, mut dark, mut clear) = (None, None, None, None);
         let (mut dimensions, mut offset) = (None, None);
+        let mut capture_count = None;
         while let Some(flag) = args.next() {
             let value = args
                 .next()
@@ -86,6 +88,17 @@ impl Probe {
                     let dy = dy.parse().context("invalid vertical offset")?;
                     ensure!(offset.replace([dx, dy]).is_none(), "duplicate --offset");
                 }
+                "--capture-count" => {
+                    let count: u32 = value.parse().context("invalid capture count")?;
+                    ensure!(
+                        (2..=32).contains(&count),
+                        "capture count must be 2 through 32"
+                    );
+                    ensure!(
+                        capture_count.replace(count).is_none(),
+                        "duplicate --capture-count"
+                    );
+                }
                 "--appearance" => {
                     let value = match value.as_str() {
                         "light" => false,
@@ -118,6 +131,7 @@ impl Probe {
             offset: offset.unwrap_or([0, 0]),
             dark: dark.context("probe requires --appearance")?,
             clear: clear.context("probe requires --style")?,
+            capture_count: capture_count.unwrap_or(2),
         };
         let [x, y, width, height, _] = probe.geometry();
         ensure!(
@@ -138,8 +152,13 @@ impl Probe {
         } else {
             format!("-offset{}x{}", self.offset[0], self.offset[1])
         };
+        let count = if self.capture_count == 2 {
+            String::new()
+        } else {
+            format!("-count{}", self.capture_count)
+        };
         format!(
-            "probe-{}-{}-{}{size}{offset}-{}",
+            "probe-{}-{}-{}{size}{offset}-{}{count}",
             if self.dark { "dark" } else { "light" },
             if self.clear { "clear" } else { "regular" },
             self.shape.name(),
@@ -191,8 +210,20 @@ impl Probe {
         titlebar_height: f64,
     ) -> Result<()> {
         let name = self.name();
+        let metadata = self.metadata(scale, titlebar_height);
+        println!("{metadata}");
+        std::fs::write(directory.join(format!("{name}.json")), metadata)
+            .context("saving probe parameters")
+    }
+
+    fn metadata(&self, scale: f64, titlebar_height: f64) -> String {
+        let name = self.name();
+        let captures = (0..self.capture_count)
+            .map(|repeat| format!("\"{name}-capture{repeat}.png\""))
+            .collect::<Vec<_>>()
+            .join(", ");
         let [x, y, w, h, radius] = self.geometry();
-        let metadata = format!(
+        format!(
             r#"{{
   "case": "{name}",
   "mode": "probe",
@@ -209,7 +240,7 @@ impl Probe {
   "glass": {{"shape": "{}", "bounds_logical": [{x}, {y}, {w}, {h}], "corner_radius_logical": {radius}}},
   "required_window_state": {{"visible": true, "active": false, "key": false}},
   "background_png": "{name}-background.png",
-  "captures": ["{name}-capture0.png", "{name}-capture1.png"]
+  "captures": [{captures}]
 }}
 "#,
             if self.dark { "dark" } else { "light" },
@@ -217,10 +248,7 @@ impl Probe {
             self.background.metadata(self.dark),
             titlebar_height * scale,
             self.shape.name()
-        );
-        println!("{metadata}");
-        std::fs::write(directory.join(format!("{name}.json")), metadata)
-            .context("saving probe parameters")
+        )
     }
 }
 
@@ -383,6 +411,42 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn capture_count_names_and_metadata_preserve_default_and_list_all_frames() -> Result<()> {
+        let default = probe("roundrect", "step:v", &[])?;
+        assert_eq!(
+            probe("roundrect", "step:v", &["--capture-count", "2"])?.metadata(2.0, 28.0),
+            default.metadata(2.0, 28.0)
+        );
+        let repeated = probe("roundrect", "step:v", &["--capture-count", "4"])?;
+        assert_eq!(repeated.name(), "probe-light-clear-roundrect-step-v-count4");
+        let captures = (0..4)
+            .map(|i| format!("\"probe-light-clear-roundrect-step-v-count4-capture{i}.png\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        assert!(
+            repeated
+                .metadata(2.0, 28.0)
+                .contains(&format!("\"captures\": [{captures}]"))
+        );
+        assert!(probe("circle", "ramp", &["--capture-count", "32"]).is_ok());
+        for value in ["0", "1", "33", "-1", "2.5", "NaN", "4294967296"] {
+            assert!(
+                probe("roundrect", "step:v", &["--capture-count", value]).is_err(),
+                "accepted {value}"
+            );
+        }
+        assert!(
+            probe(
+                "roundrect",
+                "step:v",
+                &["--capture-count", "2", "--capture-count", "2"]
+            )
+            .is_err()
+        );
+        Ok(())
     }
 
     #[test]

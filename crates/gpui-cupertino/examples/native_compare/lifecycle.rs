@@ -40,10 +40,13 @@ struct Session {
     scale: f64,
     name: String,
     stage: Stage,
+    capture_count: u32,
+    prepared_at: Instant,
 }
 
 impl Session {
     fn new(directory: PathBuf, probe: Option<Probe>, mtm: MainThreadMarker) -> Self {
+        let capture_count = probe.as_ref().map_or(2, |probe| probe.capture_count);
         let cases = if let Some(probe) = probe {
             VecDeque::from([Case::Probe(probe)])
         } else {
@@ -79,10 +82,13 @@ impl Session {
             scale,
             name: String::new(),
             stage: Stage::Prepare,
+            capture_count,
+            prepared_at: Instant::now(),
         }
     }
 
     fn prepare(&mut self, case: Case, app: &NSApplication, mtm: MainThreadMarker) -> Result<()> {
+        self.prepared_at = Instant::now();
         let scale = self.scale as f32;
         let (dark, clear) = match &case {
             Case::Probe(probe) => (probe.dark, probe.clear),
@@ -154,6 +160,12 @@ impl Session {
             .join(format!("{}-capture{repeat}.png", self.name))
     }
 
+    fn record_timing(&self, stage: &str, repeat: Option<u32>) {
+        let elapsed = self.prepared_at.elapsed().as_secs_f64() * 1000.0;
+        let repeat = repeat.map_or_else(String::new, |repeat| format!(",\"repeat\":{repeat}"));
+        println!("TIMING {{\"stage\":\"{stage}\",\"elapsed_since_prepare_ms\":{elapsed}{repeat}}}");
+    }
+
     fn capture(&mut self, app: &NSApplication, repeat: u32) -> Result<Option<f64>> {
         let path = self.capture_path(repeat);
         validate_capture_state(
@@ -162,6 +174,7 @@ impl Session {
             &self.window,
             self.scale,
         )?;
+        self.record_timing("before_capture", Some(repeat));
         let status = Command::new("/usr/sbin/screencapture")
             .args(["-x", "-o", &format!("-l{}", self.window.windowNumber())])
             .arg(&path)
@@ -171,6 +184,7 @@ impl Session {
             status.success(),
             "capture of owned window failed; verify the graphical session and screen recording permission"
         );
+        self.record_timing("after_capture", Some(repeat));
         self.stage = Stage::AfterCapture { repeat };
         Ok(Some(0.3))
     }
@@ -188,6 +202,7 @@ impl Session {
             }
             Stage::Deactivate => {
                 app.deactivate();
+                self.record_timing("deactivate", None);
                 self.stage = Stage::AwaitInactive {
                     deadline: Instant::now() + std::time::Duration::from_secs(5),
                 };
@@ -213,8 +228,8 @@ impl Session {
                     &self.window,
                     self.scale,
                 )?;
-                if repeat == 0 {
-                    self.capture(app, 1)
+                if repeat + 1 < self.capture_count {
+                    self.capture(app, repeat + 1)
                 } else {
                     self.stage = Stage::Prepare;
                     Ok(Some(0.0))

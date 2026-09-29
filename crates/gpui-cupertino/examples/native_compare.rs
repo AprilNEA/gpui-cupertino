@@ -3,6 +3,7 @@
 //! Isolate one case with `OUT probe --background step:v --shape roundrect --appearance light --style regular`.
 //! Optional `--size WIDTHxHEIGHT` centers the shape; circles require equal dimensions.
 //! Optional `--offset DX,DY` shifts only the glass by integer logical pixels within the panel.
+//! Optional `--capture-count N` captures 2 through 32 frames with a 0.3-second delay after each capture completes.
 //! `step:v[:phase]` / `step:h[:phase]` shift the edge right/down in half-logical-pixel increments.
 //! Step boundaries must map exactly to device pixels at the current display scale.
 //! `checker:N:phase:RRGGBB:RRGGBB` uses explicit colors; `checker:N[:phase]` keeps appearance palettes.
