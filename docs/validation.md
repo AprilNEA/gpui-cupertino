@@ -543,6 +543,18 @@ The P3 result, raw Float32 conversions and static evidence are sealed in
 `internal-docs/research/clear-p3-domain-2026-09-29`; public observations and the
 separately preserved observer startup failure are in `clear-color-space-2026-09-29`.
 
+The subsequent face-opacity intervention has not passed its protocol gates.
+Two attempts stopped before capture when an auxiliary filter identity changed.
+A separate revision with one deactivation per appearance completed all 12
+A0/B/A1 captures without a native assertion failure, but independent validation
+rejected their 1536×704 window images: the frozen reference requires 1536×696.
+The Swift and Rust executables were linked against SDK 26.5 and SDK 14.4,
+respectively. Building the Swift probe against the real installed SDK 14.4
+requires a compatible Swift toolchain; the installed Swift 6.3.3 rejected that
+SDK's Swift 5.10 interfaces. No crop or acceptance threshold was changed, and
+these captures were not optically scored. All three attempts and their failures
+are preserved in `internal-docs/research/clear-face-bypass*-2026-09-29`.
+
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
 with the circle boundary; this cannot be explained by one position-independent
