@@ -47,6 +47,12 @@ struct Session {
 impl Session {
     fn new(directory: PathBuf, probe: Option<Probe>, mtm: MainThreadMarker) -> Self {
         let capture_count = probe.as_ref().map_or(2, |probe| probe.capture_count);
+        // Calibration inputs must not include the window decoration's alpha mask.
+        let style = if probe.is_some() {
+            NSWindowStyleMask::Borderless
+        } else {
+            NSWindowStyleMask::Titled
+        };
         let cases = if let Some(probe) = probe {
             VecDeque::from([Case::Probe(probe)])
         } else {
@@ -66,7 +72,7 @@ impl Session {
             NSWindow::initWithContentRect_styleMask_backing_defer(
                 NSWindow::alloc(mtm),
                 rect(100.0, 200.0, (WIDTH * 2.0).into(), HEIGHT.into()),
-                NSWindowStyleMask::Titled,
+                style,
                 NSBackingStoreType::Buffered,
                 false,
             )

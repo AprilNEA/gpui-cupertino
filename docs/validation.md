@@ -219,7 +219,9 @@ zero-based `repeat` index. `after_capture` records the screenshot process's
 successful return, before the delay and subsequent native state check.
 
 Each case writes the exact input PNG, its captures, and JSON
-containing geometry, scale, and the measured title-bar offset. State checks apply
+containing geometry, scale, and the measured content offset. Probe mode uses a
+borderless window so the source image is not masked by rounded window corners;
+the comparison demo keeps its titled window. State checks apply
 to every capture. The example runs AppKit's application event loop; its delegate
 schedules preparation, deactivation, and each capture on a separate turn.
 The first capture waits at least five seconds after deactivation for rendering to
@@ -554,6 +556,41 @@ requires a compatible Swift toolchain; the installed Swift 6.3.3 rejected that
 SDK's Swift 5.10 interfaces. No crop or acceptance threshold was changed, and
 these captures were not optically scored. All three attempts and their failures
 are preserved in `internal-docs/research/clear-face-bypass*-2026-09-29`.
+
+Using the installed Xcode toolchain, an isolated Rust probe was rebuilt against
+SDK 26.5/minimum macOS 26.0 to match the Swift probe. A new baseline froze 1,065
+inputs before capture and verified all six fresh host parameter conditions.
+All 24 captures passed source, ICC, timing, state and complete-panel zero-repeat
+checks at the new 1536×704 geometry. Every center ROI was byte-identical to the
+old SDK cohort; all 13 models retained the same center/edge maximum errors and
+pass counts. The primary still fails at 4.403819/3.993046. This removes the SDK
+mismatch from the next intervention's prerequisites; it does not repair the
+colored-background discrepancy. Build provenance, source snapshots, raw images,
+all model outputs and independent reviews are retained in
+`internal-docs/research/clear-xcode-baseline-2026-09-29`.
+
+The same-SDK face intervention completed 12 captures but still failed its hard
+opacity gate: the titled window's bottom corners contain 584 nonopaque content
+pixels, including six inside the original control ROI. Separate raw comparisons
+also found up to 15 codes of A0/A1 difference around the glass outline and up to
+13 codes between the dark B repeats; these pixels are opaque and distinct from
+the window corners. The original checker remains unchanged and no optical score
+was run. This failure is retained in `clear-face-bypass-current-2026-09-29`.
+The borderless probe removes window decorations from acquisition while retaining
+the full-content opacity and zero-repeat requirements. Its first batch stopped
+at the final system screenshot and is retained as incomplete. A complete fresh
+12-case batch then passed all 24 full-content alpha checks and every native and
+control repeat gate. The incomplete batch is not merged into this new baseline,
+retained in `internal-docs/research/clear-borderless-retry-2026-09-29`.
+
+A read-only owned-window observation also found that the first backdrop-aware
+vibrant layer has an opaque white Extended sRGB background, despite nil contents.
+Its zero host matrix alpha row therefore cannot by itself establish that the
+branch contributes nothing. All 17 model layers and the owned image/content
+views shared a CAContext whose color-space ICC matched the captured display.
+These are client-side observations, not proof of the GPU's intermediate working
+space. Sources, raw model/presentation trees and state checks are retained in
+`internal-docs/research/clear-vibrant-inputs-2026-09-29`.
 
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
