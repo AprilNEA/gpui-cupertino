@@ -33,8 +33,10 @@ let toolbar = Glass::new(material, div().px_4().py_2().child("Library"));
 ## Development
 
 Install [Nix](https://nixos.org/download/) and [devenv](https://devenv.sh/getting-started/).
-devenv provides Rust stable, Cargo, rustfmt, Clippy, and rust-analyzer;
-`devenv.lock` pins the environment inputs.
+devenv provides Rust stable, Cargo, rustfmt, Clippy, and rust-analyzer, plus
+Python with NumPy, SciPy, Pillow (including ICC color management), and Matplotlib
+for material calibration. `devenv.lock` pins the environment inputs and Python
+packages; no separate pip installation is needed.
 On macOS, select a full Xcode installation with its Metal Toolchain installed;
 `xcrun -sdk macosx metal --version` must succeed. The environment uses Xcode's SDK
 because building GPUI's shaders requires the Metal compiler.

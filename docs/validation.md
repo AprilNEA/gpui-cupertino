@@ -342,8 +342,11 @@ See [Apple's colorspace contract](https://developer.apple.com/documentation/quar
 
 No private filter calls, system shader binaries, or host recipes are used by the
 library. Local inspection tools, raw logs, and provenance remain in the ignored
-research directory. Mathematical fitting is pending a SciPy-enabled analysis
-environment; acquisition and fixed-formula verification are independent of it.
+research directory. The repository's devenv includes Python with NumPy, SciPy,
+Pillow/ImageCms, and Matplotlib for measurement, fitting, and plotting. Run local
+analysis scripts with `devenv shell -- python3 work/<script>.py`; package versions
+come from the pinned Nix inputs. The recorded fixed-formula results did not use
+an optimizer; nonlinear fitting is no longer blocked on the analysis environment.
 Active-state parameters were subsequently obtained with `active=true`,
 `key=true`, and `visible=true` for all four styles/appearances at 256×128/r20.
 Three valid cases came from one run; a separate single-case run supplied dark
