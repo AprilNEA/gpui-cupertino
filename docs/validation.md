@@ -583,6 +583,47 @@ at the final system screenshot and is retained as incomplete. A complete fresh
 control repeat gate. The incomplete batch is not merged into this new baseline,
 retained in `internal-docs/research/clear-borderless-retry-2026-09-29`.
 
+The borderless face intervention passed its opacity, source, state and parameter
+hard gates, permitting the predeclared per-image diagnostics. Its quality and
+restoration gates still failed: both B repeat pairs change around the glass
+outline, and A1 does not exactly recover A0. Centers remain unchanged between
+repeats, but the original bottom edge ROI contains one-code differences. All A0
+native panels exactly reproduce the Rust baseline. The no-face model reaches
+5.318159/5.333851 center/edge error; applying the fixed face formula to B reaches
+1.176658/1.099652 against A. Both numerical gates remain failed. A separate
+analytic diagnostic places a B color 4.476190 codes outside any common mixture
+of the two captured control endpoints. Thus changing only Display-domain mixing
+weights cannot explain that observed color. The intervention remains conditional
+because its complete restoration gate failed; no candidate was promoted. Raw
+images, independent numerical/spatial reviews and all failures are retained in
+`internal-docs/research/clear-face-bypass-borderless-2026-09-29`.
+
+Updating `filters.glassBackground.inputFaceOpacity` through the owning layer's
+key path did not fix restoration. Eleven of twelve RGBA captures exactly
+reproduced the explicit array-replacement run; the remaining light B frame
+matched that run's second B frame. Every A0/A1 image was unchanged, and both
+numerical gates retained the same maximum errors. Switching between these
+mutation routes did not resolve the observed restoration or scoring failures.
+The separate protocol and raw captures are retained in
+`internal-docs/research/clear-face-bypass-owner-kvc-2026-09-29`.
+
+A separate 1× offscreen feasibility probe stopped before creating Metal or
+CARenderer resources: public layout of a fresh, never-displayed NSView/glass tree
+did not provide the required layers. No raw frames or optical scores were
+produced. This does not establish whether CARenderer can render glass from an
+otherwise valid tree. The fixed single-attempt protocol and failure are retained
+in `internal-docs/research/clear-carenderer-2026-09-29`.
+
+A post-hoc diagnostic separated the source color path from spatial weights:
+16,385 and 65,537 fixed sRGB endpoint mixtures were converted with the existing
+ColorSync helper into the capture ICC. Among 2,109 distinct B colors, only six
+had a sampled point within one code, all in the bottom band; no center pixel had
+such a witness. The fine grid's worst nearest sampled distance was 5.558503.
+This argues against that fixed path as a sufficient explanation, but sampled
+minima are upper bounds on continuous minima, not proofs of unreachability.
+All earlier failures remain unchanged. Raw Float32 curves and per-color/ROI
+results are retained in `internal-docs/research/clear-source-mixture-curve-2026-09-29`.
+
 A read-only owned-window observation also found that the first backdrop-aware
 vibrant layer has an opaque white Extended sRGB background, despite nil contents.
 Its zero host matrix alpha row therefore cannot by itself establish that the
