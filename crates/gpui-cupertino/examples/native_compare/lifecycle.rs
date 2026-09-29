@@ -204,9 +204,9 @@ impl Session {
                 app.deactivate();
                 self.record_timing("deactivate", None);
                 self.stage = Stage::AwaitInactive {
-                    deadline: Instant::now() + std::time::Duration::from_secs(5),
+                    deadline: Instant::now() + std::time::Duration::from_secs(10),
                 };
-                Ok(Some(0.8))
+                Ok(Some(5.0))
             }
             Stage::AwaitInactive { deadline } => {
                 if !app.isActive() && !self.window.isKeyWindow() {
@@ -214,7 +214,7 @@ impl Session {
                 }
                 ensure!(
                     Instant::now() < deadline,
-                    "native comparison did not reach inactive/non-key state within five seconds: running={}, active={}, key={}",
+                    "native comparison did not reach inactive/non-key state within ten seconds: running={}, active={}, key={}",
                     app.isRunning(),
                     app.isActive(),
                     self.window.isKeyWindow()

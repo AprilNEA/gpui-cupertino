@@ -222,8 +222,10 @@ Each case writes the exact input PNG, its captures, and JSON
 containing geometry, scale, and the measured title-bar offset. State checks apply
 to every capture. The example runs AppKit's application event loop; its delegate
 schedules preparation, deactivation, and each capture on a separate turn.
-Deactivation has a five-second deadline. Checks before and after each screenshot
-are never bypassed when the state is wrong.
+The first capture waits at least five seconds after deactivation for rendering to
+settle; inactive/non-key state has a ten-second deadline. Checks before and after
+each screenshot are never bypassed when the state is wrong. This fixed delay
+does not select frames or disable animations.
 
 The first isolation matrix contains 68 cases and 136 successful captures:
 five grays, three primaries, two appearance-specific checker colors, two step
