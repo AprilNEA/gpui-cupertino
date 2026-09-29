@@ -373,9 +373,48 @@ after validation. The result supports this one-dimensional inactive Clear
 response across the measured phases, axes, appearances, and two sizes. It does
 not establish actual compute dispatch, a portable working color space,
 two-dimensional separability, contour optics, or active-state equivalence. The
-library's Gaussian contract is unchanged. Frozen models, prospective results,
-and plots are in `work/clear-grid-models-v2-2026-09-29`; independent capture
-checks are in `work/probes-phase-size-2026-09-29-validation.json`.
+library's Gaussian contract is unchanged. The complete experiment, including
+failed attempts, models, raw captures, plots, and source snapshots, is archived
+under `internal-docs/research/clear-1d-2026-09-29`. All 621 original files passed
+SHA-256 verification; replay in a temporary copy reproduced the complete result
+JSON without reading the repository's original `work/` directory.
+
+A subsequent frozen two-dimensional experiment used seven checker conditions
+and both captures, comparing the full nonseparable 13-point kernel with the
+outer product of its one-dimensional projection. A separate edge experiment
+used light/dark ramps and two gray checker frequencies, with four straight-edge
+bands per capture. The full-panel input hypothesis failed: maximum single-channel
+errors were 13.248 levels in the fixed depth-at-least-24 interior and 27.548 in
+the fixed 2–20 logical-pixel edge bands. Matching one-dimensional steps had not
+identified the background boundary behavior.
+
+Post-observation diagnosis found that replicating the base image's first/last
+inside rows and columns **before generating the mip levels** explains most of
+these residuals. This ordering has independent static control-flow evidence;
+clamping each already-filtered mip level gives a different result. The revised
+candidate keeps the same kernel, color response, radius, optical profile
+`1 - sqrt(t * (2 - t))`, amount `-60`, width `20`, ROIs, and one-level threshold,
+with no fitted parameters. Its maximum interior error is 1.054 levels, versus
+11.203 for the separable counterexample with the same boundary rule. Maximum
+edge error is 1.063 levels; 46 of 48 edge bands are within one level, while the
+zero-refraction counterexample fails every band and reaches 55.509 levels.
+
+These revised results are **development evidence, not prospective acceptance**.
+The light colored checker still exceeds one level at some interior samples;
+dark ramp bottom-edge samples also exceed it. No failed sample was removed and
+no threshold was relaxed. Repeated captures agree in every measured center,
+left, right, and top ROI, but ten of eleven conditions have up to one level of
+bottom-edge variation. The independent zero-repeat-noise check therefore fails
+and remains separate from model scores; neither averaging nor subtracting
+noise is used to manufacture a pass.
+
+Raw captures, input and state checks, all failed boundary candidates, static
+evidence, scripts, and residual plots are retained under
+`internal-docs/research/clear-2d-edge-2026-09-29`,
+`internal-docs/research/clear-2d-2026-09-29`, and
+`internal-docs/research/clear-edge-2026-09-29`. These directories remain locally
+ignored research, and none of these diagnostic candidates changes the product
+renderer or establishes native equivalence.
 
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
