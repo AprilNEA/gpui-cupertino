@@ -533,6 +533,16 @@ possible. This diagnostic does not select a domain or pass optical acceptance.
 Raw captures, independent review and scripts are retained in
 `internal-docs/research/clear-solid-color-2026-09-29`.
 
+A single conditional encoded Display P3 filtering domain was also falsified.
+Source sRGB → P3 → unchanged full13/refraction → captured Display ICC → face
+produced center/edge maxima of 8.716038/7.586206; only 8/24 centers and 38/80
+edge regions passed. All 104 baseline regions were reproduced, and the prior
+13 columns were retained unchanged. Public window/screen observations matched
+the capture ICC, but do not identify an intermediate blend or blur space.
+The P3 result, raw Float32 conversions and static evidence are sealed in
+`internal-docs/research/clear-p3-domain-2026-09-29`; public observations and the
+separately preserved observer startup failure are in `clear-color-space-2026-09-29`.
+
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
 with the circle boundary; this cannot be explained by one position-independent
