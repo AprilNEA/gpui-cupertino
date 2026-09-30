@@ -519,6 +519,16 @@ the color response and filtering domain still require isolation. The frozen
 primary, every failed column, raw captures and GPU outputs are retained in
 `internal-docs/research/clear-stable-prospective-2026-09-29`.
 
+An exact-arithmetic check further limits post-color calibration. Two center
+pixels in the validated borderless baseline have identical full13 mixture
+fractions but differ by four native RGB codes. Any position-independent function
+of that same fraction must predict one color; at least one pixel then has an
+error of two codes or more. Both appearances and repeats contain this
+counterexample. The current spatial model therefore cannot meet the one-code
+gate by changing only a final color curve. This does not identify the missing
+native operation. Exact fractions, integer computations and source hashes are
+retained in `internal-docs/research/clear-chromatic-invariants-2026-09-30`.
+
 A prospective six-case solid-color isolation used the orange/blue endpoints
 and their exact source midpoint, with both appearances and two raw captures
 each. All state, source, ICC, five-second timing and complete native/control
