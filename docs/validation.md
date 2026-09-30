@@ -656,6 +656,24 @@ conditional model, but do not explain the native mismatch. The separate
 baseline, source texture and native branch limitations remain. Evidence is in
 `internal-docs/research/clear-skip-base-2026-09-30`.
 
+A separate frozen candidate also reproduced the superclass path's raster
+operation at all four generated levels. Its first output matched the preceding
+raster candidate exactly; the later three levels used the statically bound
+noninteger kernel and transparent-zero border. Independent RGBA checks covered
+that boundary before scoring. Every final ROI and witness query then passed a
+strict check that all positive-weight source texels had alpha exactly one.
+No boundary pixels were normalized or removed from the acceptance regions.
+
+The all-raster candidate still failed: center maximum 4.118915 with 4/24 regions
+passing, and edge maximum 4.096423 with 40/80 passing. Center/edge MAE increased
+to 0.515770/0.521585 from 0.379754/0.399241 for the preceding raster-first candidate.
+The lower center maximum therefore did not represent a consistent improvement.
+All 24 original captures and 104 baseline regions remained in the comparison.
+The fixed source proxy, native format and runtime branch remain unresolved;
+these experiments do not establish a native style preset. Sources, raw RGBA,
+scores and the independent review are retained in
+`internal-docs/research/clear-raster-chain-2026-09-30`.
+
 The borderless face intervention passed its opacity, source, state and parameter
 hard gates, permitting the predeclared per-image diagnostics. Its quality and
 restoration gates still failed: both B repeat pairs change around the glass
