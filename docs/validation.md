@@ -601,9 +601,39 @@ render and the old compute upload matched exactly, while both differed from
 the check's NumPy nearest-even conversion by at most 0.124512 codes. Metal's
 default texture-write mode is hardware-native; the available feature table
 does not specify that mode for this GPU. The failed assertion and raw outputs
-remain unchanged. The proposed reference correction awaits approval in
-`internal-docs/research/clear-lossy-texture-2026-09-30`; no optical improvement
-or acceptance is established by this preparation.
+remain unchanged in `internal-docs/research/clear-lossy-texture-2026-09-30`.
+
+After approval, a separate experiment compared lossless upload with the frozen
+compute upload. Both synthetic fixtures passed exact upload and repeat checks;
+all five lossless levels also matched the compute result. The frozen comparison
+then evaluated both compression modes on all 24 original captures:
+
+| RGBA16Float render path | Center maximum / passed regions | Edge maximum / passed regions |
+| --- | ---: | ---: |
+| Lossless | 4.347033 / 12 of 24 | 3.937689 / 60 of 80 |
+| Lossy | 4.392967 / 12 of 24 | 3.941699 / 60 of 80 |
+
+Both columns fail the unchanged one-code threshold. Lossless results exactly
+reproduce the earlier GPU half-precision column across all 104 regions. Lossy
+compression predicts less than 0.071 code of separation at the fixed equal-input
+witnesses, whose native green channels differ by four codes. This particular
+compression change does not explain the residual. The experiment uses five
+independent textures; native multi-mip allocation, format and compression remain
+unbound. Sources, raw texels, scores and an independent hash review are sealed in
+`internal-docs/research/clear-lossy-corrected-2026-09-30`.
+
+Further system tracing distinguishes requested bounds from allocated texture
+dimensions and identifies conditional mixed-format capture and mip storage.
+The observed Clear filter inputs also satisfy the radius condition for skipping
+the base mip, assuming one glass group and unit working scale. That branch
+changes the first sampling pass and halves the later sampling scale. Simply
+removing a pyramid level would not reproduce the operation. These are conditional
+implementation findings, not measurements of the captured frame's selected path.
+The ordinary MetalContext also inherits a null `read_surface` implementation,
+so the inspected `CA_DUMP_BACKDROPS` path cannot export its texture. The print
+option reports logical bounds and scale, not format or allocated dimensions.
+Read-only evidence is retained in
+`internal-docs/research/clear-native-storage-2026-09-30`.
 
 The borderless face intervention passed its opacity, source, state and parameter
 hard gates, permitting the predeclared per-image diagnostics. Its quality and
@@ -635,6 +665,14 @@ did not provide the required layers. No raw frames or optical scores were
 produced. This does not establish whether CARenderer can render glass from an
 otherwise valid tree. The fixed single-attempt protocol and failure are retained
 in `internal-docs/research/clear-carenderer-2026-09-29`.
+
+A separate frozen attempt added only explicit layer backing to the glass view.
+The layer-existence check passed, but the tree contained no `glassBackground`
+filter and both CAContexts were nil. The original generation gate stopped the
+probe before Metal or CARenderer creation. No frames or optical scores exist;
+explicit backing alone did not make this construction renderable. The source,
+observations and failure are sealed in
+`internal-docs/research/clear-carenderer-backed-2026-09-30`.
 
 A post-hoc diagnostic separated the source color path from spatial weights:
 16,385 and 65,537 fixed sRGB endpoint mixtures were converted with the existing
