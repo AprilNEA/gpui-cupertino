@@ -593,6 +593,18 @@ at the final system screenshot and is retained as incomplete. A complete fresh
 control repeat gate. The incomplete batch is not merged into this new baseline,
 retained in `internal-docs/research/clear-borderless-retry-2026-09-29`.
 
+Static allocation tracing found conditional lossy-texture requests in both
+backdrop capture and blur mip construction. The captured frames' actual format
+and compression mode remain unbound. A public render-pass comparison compiled,
+but its synthetic upload check stopped before native-image scoring: lossless
+render and the old compute upload matched exactly, while both differed from
+the check's NumPy nearest-even conversion by at most 0.124512 codes. Metal's
+default texture-write mode is hardware-native; the available feature table
+does not specify that mode for this GPU. The failed assertion and raw outputs
+remain unchanged. The proposed reference correction awaits approval in
+`internal-docs/research/clear-lossy-texture-2026-09-30`; no optical improvement
+or acceptance is established by this preparation.
+
 The borderless face intervention passed its opacity, source, state and parameter
 hard gates, permitting the predeclared per-image diagnostics. Its quality and
 restoration gates still failed: both B repeat pairs change around the glass
@@ -642,6 +654,16 @@ views shared a CAContext whose color-space ICC matched the captured display.
 These are client-side observations, not proof of the GPU's intermediate working
 space. Sources, raw model/presentation trees and state checks are retained in
 `internal-docs/research/clear-vibrant-inputs-2026-09-29`.
+
+A later opacity-only intervention disabled that white backdrop-aware vibrant
+layer while retaining every filter and parameter. All A0/B native panels were
+pixel-identical in both appearances, and the equal-full13-input counterexamples
+remained unchanged. Every stage repeated exactly. Light restoration and twelve
+old-baseline ROI comparisons still failed the zero-code gate with one-code
+differences near the bottom outline. The experiment therefore supplies no
+evidence that this layer explains the center mismatch, and its overall
+interpretation gate remains failed. Original captures and the independent review
+are retained in `internal-docs/research/clear-vibrant-ablation-2026-09-30`.
 
 Coordinate ramps also showed a slope reversal in the inner 2–10 logical-pixel
 edge band, while the central slope remained positive. The reversed region moved
