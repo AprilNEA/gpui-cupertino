@@ -700,6 +700,42 @@ format measurement. No optical candidate or production parameter changed.
 Sources, raw observations and checks are retained in
 `internal-docs/research/clear-capture-properties-2026-09-30`.
 
+A fixed-node upstream diagnosis then checked the complete local dependency
+graphs of the existing equal-input witnesses. The transform
+`T(x,y)=(y+64,x-64)` preserves their source values and corresponding weights
+through levels 0–4, with zero unequal nodes at every level. The rectangular
+clamp changes some coordinates but no source colors in these dependencies.
+The equality therefore predates final reconstruction. A spatially uniform
+pointwise color operation inserted into this exact, exchange-equivariant
+pipeline cannot separate the witnesses. Actual GPU rounding, source fields,
+coverage and coordinates remain separate conditions.
+
+Static tracing also recovered ColorProgram construction, six serial opcode
+slots and two 32,768-entry half gamma tables. No active frame's program was
+bound. Ordinary capture can sample individual surfaces before source-over
+composition. With matched linear sampling and identity source conversion,
+this differs from sampling an already-composited screenshot when source alpha
+and background have nonzero local covariance. One opaque source
+eliminates that difference, and multiple sources alone do not break the witness
+symmetry. The required native source condition has not been established.
+Member rectangles, group Shape, selected source bounds and texture allocation
+have distinct producers. These findings constrain the next source/coordinate
+diagnosis without selecting a new color, phase or crop parameter. Scripts,
+exact results, table decoders and independent reviews are sealed in
+`internal-docs/research/clear-upstream-2026-10-01`.
+
+A subsequent frozen owned-window observation passed all session, timing,
+repeated-tree and provenance checks against 162 inputs. All four observations
+reported nil groupName, owningContext namespace, allowsInPlaceFiltering false,
+zero backdropRect and zero marginWidth. These values were also present in the
+presentation tree. The traced submission path therefore supplies no explicit
+group name or margin expansion; the member-rectangle producer falls back to
+the layer bounds when participating. This constrains the new observation, not
+the historical frames or the server's complete group, prepared Shape and source
+stack. No new optical score or production change followed. The observer,
+raw records and independent review are retained in
+`internal-docs/research/clear-group-properties-2026-10-01`.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
