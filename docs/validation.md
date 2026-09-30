@@ -635,6 +635,27 @@ option reports logical bounds and scale, not format or allocated dimensions.
 Read-only evidence is retained in
 `internal-docs/research/clear-native-storage-2026-09-30`.
 
+The omitted-base first-pass investigation recovered two specific operations:
+explicit half-precision 2×2 averaging before the compute kernel, and a raster
+kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
+select the half-precision raster variant. Independent public MSL compilation
+also reproduces its sampler constant. A new frozen experiment replaced only
+the first pass, preserving the source proxy, later AGX2 passes and final optics:
+
+| First pass | Center maximum / passed regions | Edge maximum / passed regions |
+| --- | ---: | ---: |
+| Explicit half average and full13 | 4.340418 / 12 of 24 | 3.929278 / 62 of 80 |
+| Noninteger raster sampling | 4.339235 / 14 of 24 | 3.927384 / 58 of 80 |
+
+Both candidates still fail. The fixed witness pairs retain a native green
+difference of four codes, while these predictions differ by at most 0.005125
+green code. Synthetic formula, impulse-support, alpha and exact-repeat checks
+passed before the image matrix; all 104 baseline regions were reproduced.
+The first-pass formulas therefore supply reproducible corrections to this
+conditional model, but do not explain the native mismatch. The separate
+baseline, source texture and native branch limitations remain. Evidence is in
+`internal-docs/research/clear-skip-base-2026-09-30`.
+
 The borderless face intervention passed its opacity, source, state and parameter
 hard gates, permitting the predeclared per-image diagnostics. Its quality and
 restoration gates still failed: both B repeat pairs change around the glass
