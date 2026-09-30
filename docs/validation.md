@@ -736,6 +736,29 @@ stack. No new optical score or production change followed. The observer,
 raw records and independent review are retained in
 `internal-docs/research/clear-group-properties-2026-10-01`.
 
+A further trace resolved the final glass shader's `_lph` selection and the
+CPU uniform conversion into half precision. A fixed replay retained the
+first-copy-base textures and added half UV, refraction, LOD, sample cleanup,
+alpha division and face-matrix operations. Synthetic checks passed after an
+explicitly approved one-line oracle correction: two sub-threshold source
+values must become zero before exact comparison. The shader and exact
+assertions remained unchanged; the original failure was sealed separately.
+
+The complete replay passed only 60/104 regions: 8/24 centers and 52/80 edges.
+Maximum errors were 4.274902 and 3.978516 codes respectively. All 20 custom
+orange/blue regions still failed. Compared with the previous first-copy-base
+candidate, 14 passing regions became failures and no failed region passed.
+An independent CPU review verified 2,216 frozen inputs, all 24 mappings and
+all 104 metrics from the saved GPU outputs, without rounding predictions.
+
+Both fixed witness pairs still had equal predicted green values despite a
+four-code native difference. Other predicted channels were not all equal,
+so this result does not exclude every cross-channel mapping. It rejects
+this fixed final-stage replay as a sufficient correction. The actual source,
+capture transform, SDF and output attachment remain unbound. No production
+parameter changed. Evidence and the independent review are retained in
+`internal-docs/research/clear-lph-final-corrected-2026-10-01`.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
