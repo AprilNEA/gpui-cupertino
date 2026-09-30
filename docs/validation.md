@@ -777,6 +777,31 @@ edge ROIs matched. Its two new captures repeated exactly. The full native
 panel changed by up to 15 codes outside the scored regions. These differences
 remain failures; the identical witnesses do not waive the baseline gate.
 
+An approved checkpoint correction completed all 28 window-origin captures.
+Only three early checkpoints observe CG position without requiring equality;
+window identity, size, AppKit registration and every settled or capture-boundary
+position check remain exact. All 186 required CG position checks passed.
+Of 42 early observations, 26 still showed the preceding position. These fixed
+observations do not measure the actual synchronization latency.
+
+The pixel quality and interpretation gates still failed. Dark X8 repeats
+differed at 1,250 native-panel pixels, with a maximum of 13 codes; 12/24 dark
+restoration comparisons also differed. The exact old-baseline gate failed in
+28/32 comparisons, with one-code changes in the bottom ROI. All 96 moved
+center comparisons and all controls were unchanged. Both fixed witness pairs
+retained their earlier values. No forced redraw occurred, so zero differences
+do not exclude screen-dependent processing after a redraw.
+
+Spatial diagnostics retained every changed pixel in three declared comparisons.
+Dark repeat and restoration changes spanned signed distances -18.25 to +0.25
+logical points from the glass boundary. Light A0 versus the old baseline
+spanned -18.75 to +0.25, with 1,111 changed pixels and a maximum of 15 codes.
+All three centers were unchanged. This location does not identify a cause or
+waive a failed gate. An independent CPU review verified 2,037 frozen inputs,
+all 28 PNGs and every reported comparison. The complete results are sealed in
+`internal-docs/research/clear-window-origin-settled-2026-10-01`.
+No production parameter or optical acceptance score changed.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
