@@ -635,6 +635,31 @@ option reports logical bounds and scale, not format or allocated dimensions.
 Read-only evidence is retained in
 `internal-docs/research/clear-native-storage-2026-09-30`.
 
+A subsequent binary audit traced capture bit-depth reduction to
+`CABackdropLayer.reducesCaptureBitDepth` and the force-half mask to scene EDR
+summary flags. The mask can include other contexts, so owned SDR layer getters
+cannot identify the compositor's capture format. Metal's lossy setter selects
+footprint 3; relevant format capabilities depend on Apple8 support. Private
+format 550 has the implementation name `MTLPixelFormatRGB10A8_2P_XR10`, distinct
+from public format 552. Neither capability nor naming establishes frame storage.
+
+For ordinary source-surface capture at scale 0.5, the recovered pixel-center
+formula supports the existing 2×2 average when the source grid and values match.
+The implementation does not justify a free sampling phase. Glass edge extent
+uses the largest absolute amount without testing opacity, giving 75 for the
+observed Clear inputs. That extent affects conditional auxiliary shapes; it
+does not justify expanding the source crop by 75 pixels. No replacement source
+model or production parameter was selected, and the optical failure is unchanged.
+The research is retained in
+`internal-docs/research/clear-capture-binding-2026-09-30`. Manual binary review
+and workspace checks passed. The SDK declaration parser now recognizes
+availability annotations. The repaired check passed all four symbol anchors,
+18 jump targets and six name-address checks. Three incorrect SDK enum values
+were rejected by the original equality assertions. The original failed parser
+remains sealed; the repair and results are retained in
+`internal-docs/research/clear-metal-parser-repair-2026-09-30`. These checks verify
+the evidence mapping, not native optical equivalence.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
