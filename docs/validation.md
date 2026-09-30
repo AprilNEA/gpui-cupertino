@@ -759,6 +759,24 @@ capture transform, SDF and output attachment remain unbound. No production
 parameter changed. Evidence and the independent review are retained in
 `internal-docs/research/clear-lph-final-corrected-2026-10-01`.
 
+A fixed window-origin experiment then stopped before its first moved capture.
+The two light A0 captures were byte-identical and exactly reproduced the old
+baseline. Static analysis located the trap in the immediate CGWindow bounds
+comparison. A separate copy added only raw registration logging and retained
+every assertion. After moving right by eight points, AppKit reported origin
+`(108,200)` while CGWindow still reported the original x coordinate `100`.
+The same window, display and scale were retained. The probe stopped before
+the fixed five-second settling interval; no later synchronization was observed.
+Neither failed run supplies a window-origin optical comparison. The raw data,
+crash reports and independent checks are retained in
+`internal-docs/research/clear-window-origin-2026-10-01` and
+`internal-docs/research/clear-window-origin-trace-2026-10-01`.
+The logging copy also failed its exact old-baseline gate: the bottom ROI
+changed by one code at 48 of 2,304 pixels, while the center and other three
+edge ROIs matched. Its two new captures repeated exactly. The full native
+panel changed by up to 15 codes outside the scored regions. These differences
+remain failures; the identical witnesses do not waive the baseline gate.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
