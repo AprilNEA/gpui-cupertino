@@ -179,6 +179,24 @@ directories. `work/` is ignored and is not part of the distributed library.
 
 ## Isolated calibration probes
 
+A final aggregation of five fixed Clear research candidates retained all 24
+borderless captures and 104 declared regions. None passed the one-code RGB
+channel limit. The candidate with the most passing regions, first copy-base,
+passed 74/104: 12/24 centers and 62/80 edges. Its maximum error was 4.340418
+codes, and 6.0299% of the 4,780,032 scored RGB channel samples exceeded one
+code. These counts describe research replays, not the production GPUI renderer
+or a percentage of implementation completion.
+
+All five candidates failed all 20 regions with the custom orange/blue palette.
+The all-raster candidate reduced the maximum to 4.118915 but passed only 44/104
+regions and increased average error. At the fixed light witness pair, the
+native green values differ by four codes while the baseline predicts identical
+RGB. A pointwise correction of that identical input has a worst-error lower
+bound of two codes. Upstream spatial or source information remains unresolved;
+this result does not identify a unique cause. The aggregation verified 2,172
+unique frozen files without rescoring images. The report and denominators are
+retained in `internal-docs/research/clear-gap-audit-2026-09-30`.
+
 The comparison example also places a single native shape beside the same input
 without glass. This separates color response, filtering, and displacement:
 
@@ -659,6 +677,28 @@ were rejected by the original equality assertions. The original failed parser
 remains sealed; the repair and results are retained in
 `internal-docs/research/clear-metal-parser-repair-2026-09-30`. These checks verify
 the evidence mapping, not native optical equivalence.
+
+Further tracing recovered the dynamic source-surface stack and the separate
+detached-texture path. Ordinary surface binding does not create a ColorProgram;
+ordinary unbinding clears that image slot's Program. Direct Render::Texture
+binding has a conditional source-color-space lookup. The first surface's entry
+state and the captured frames' source paths remain unbound. A generic shader
+ColorProgram branch therefore does not justify adding an unconditional color
+conversion to the replay. The static evidence and verified unbind vtable slot
+are retained in `internal-docs/research/clear-capture-path-2026-09-30`.
+
+A frozen read-only observation then measured the relevant owned layer getters
+on a new borderless Clear window. All four observations passed provenance,
+session, timing and repeated-tree stability checks against 103 frozen inputs.
+Both appearances reported backdrop scale 0.5, reducesCaptureBitDepth false,
+captureOnly false, and isInverseMeshed false. All 22 owned model layers had nil
+meshTransform, standard preferredDynamicRange, legacy EDR opt-in false, and
+contentsHeadroom zero. These values constrain the traced client-side producers;
+they do not measure scene-wide EDR, shared-group state or the compositor's source
+texture. In particular, RGBA8 contentsFormat is a storage hint, not a capture
+format measurement. No optical candidate or production parameter changed.
+Sources, raw observations and checks are retained in
+`internal-docs/research/clear-capture-properties-2026-09-30`.
 
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
