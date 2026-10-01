@@ -837,6 +837,33 @@ comparison or new optical score exists. Frozen inputs, the crash report,
 diagnostics and independent review are retained in
 `internal-docs/research/clear-inner-zero-2026-10-01`.
 
+After the displays woke, an unchanged binary and protocol completed a fresh
+12-image A/B/A capture with 2,312 frozen inputs. All hard input/state gates
+passed. Every A0 native panel matched the old baseline exactly. All 16 A/B
+center comparisons were zero, and both green witness differences remained
+four codes. The original edge ROIs changed by up to 59 codes in light and
+62 in dark. Inner refraction removal did not remove the observed center gap.
+
+The original pixel gates still failed. Dark B repeats changed 339 native-panel
+pixels by up to 12 codes. Every restoration pair differed: light changed
+1,111 pixels by up to 15 codes, and dark changed 1,250 by up to 13.
+All eight A1/old-baseline comparisons failed the bottom ROI by one code.
+Independent recomputation reproduced the complete report and every failure.
+
+A post-hoc diagnostic sampled the observed B composite with the fixed
+inner amount/height `-60 / 20` and profile `1 - sqrt(t * (2 - t))`.
+All 64 original edge comparisons had per-channel error at most one code;
+the maximum was 1.0 and mean absolute error was 0.097197. The same-position
+B control reached 62 codes. Predictions were not rounded or fitted, and
+every bilinear support point lay inside the glass. This supports the fixed
+straight-edge warp for this scene, conditional on the observed native B field.
+B already contains native blur, face processing and display conversion;
+these comparisons do not validate an independently generated material.
+All earlier acceptance scores and failed repeat/restoration gates remain
+unchanged. Raw captures, exhaustive boundary diagnostics and independent
+reviews are retained in
+`internal-docs/research/clear-inner-zero-awake-2026-10-01`.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
