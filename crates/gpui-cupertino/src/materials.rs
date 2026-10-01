@@ -5,10 +5,11 @@
 //! separate effects in paint order, not a shared capture or a fused glass group.
 
 use crate::platform::accessibility_preferences;
-use cupertino::materials::{GlassMaterial, GlassShape};
+use cupertino::materials::{ClearGlassMaterial, GlassMaterial, GlassShape};
 use gpui::{
     AnyElement, App, Bounds, Element, ElementId, GlobalElementId, InspectorElementId, IntoElement,
-    LayoutId, PaintBackdrop, Pixels, Window, WindowAppearance, fill, point, px, rgb, size,
+    LayoutId, PaintBackdrop, PaintClearBackdrop, Pixels, Window, WindowAppearance, fill, point, px,
+    rgb, size,
 };
 
 /// Additional accessibility preferences provided by the host application.
@@ -31,16 +32,32 @@ pub struct GlassAccessibility {
 /// Sampling requires an opaque SDR window background; transparent windows and
 /// HDR/EDR composition are not supported.
 pub struct Glass {
-    material: GlassMaterial,
+    material: Material,
     content: AnyElement,
     accessibility: GlassAccessibility,
+}
+
+enum Material {
+    Gaussian(GlassMaterial),
+    Clear(ClearGlassMaterial),
 }
 
 impl Glass {
     /// Wrap content with a validated glass material.
     pub fn new(material: GlassMaterial, content: impl IntoElement) -> Self {
         Self {
-            material,
+            material: Material::Gaussian(material),
+            content: content.into_any_element(),
+            accessibility: GlassAccessibility::default(),
+        }
+    }
+
+    /// Wrap content with inactive Clear, using the host window's appearance.
+    ///
+    /// Requires the macOS Metal backend and an Apple GPU.
+    pub fn clear(material: ClearGlassMaterial, content: impl IntoElement) -> Self {
+        Self {
+            material: Material::Clear(material),
             content: content.into_any_element(),
             accessibility: GlassAccessibility::default(),
         }
@@ -106,8 +123,11 @@ impl Element for Glass {
         window: &mut Window,
         cx: &mut App,
     ) {
-        let options = self.material.options();
-        let (shape, bounds, corner_radius) = outline(options.shape, bounds);
+        let outline_shape = match self.material {
+            Material::Gaussian(material) => material.options().shape,
+            Material::Clear(material) => material.shape(),
+        };
+        let (shape, bounds, corner_radius) = outline(outline_shape, bounds);
         let system = accessibility_preferences(cx);
         let increase_contrast = self.accessibility.increase_contrast || system.increase_contrast;
         if self.accessibility.reduce_transparency || system.reduce_transparency || increase_contrast
@@ -125,8 +145,9 @@ impl Element for Glass {
                     0x000000
                 }));
             }
-            window.paint_quad(surface);
-        } else {
+            window.paint_continuous_quad(surface);
+        } else if let Material::Gaussian(material) = self.material {
+            let options = material.options();
             window.paint_backdrop(PaintBackdrop {
                 shape,
                 bounds,
@@ -141,6 +162,12 @@ impl Element for Glass {
                 dispersion: px(options.dispersion),
                 highlight: options.highlight,
                 edge_bleed: options.edge_bleed,
+            });
+        } else if let Material::Clear(material) = self.material {
+            window.paint_clear_backdrop(PaintClearBackdrop {
+                bounds,
+                corner_radius,
+                blur_radius: px(material.blur_radius()),
             });
         }
         self.content.paint(window, cx);

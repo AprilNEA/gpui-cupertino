@@ -1,8 +1,66 @@
 # Foundation validation
 
-Measured on macOS 26.4 (25E246), Apple M5 Max, on 2026-09-28–29. These are
-independent numerical and behavioral acceptance checks. They do not establish
-visual equivalence with Apple's native material styles.
+## Production Clear integration, 2026-10-01
+
+The final Rust + GPUI implementation passes the complete original inactive
+Clear matrix through both headless rendering and actual WindowServer capture.
+Each gate retains all 24 images and 104 region masks. Maximum individual RGB
+error is one code; all 24 complete control panels are byte-identical in each
+gate. No masks, thresholds, or reference pixels were changed, and repeats were
+not averaged.
+
+| Final gate | Captures | Passed regions | Maximum channel error | Exact complete controls |
+| --- | ---: | ---: | ---: | ---: |
+| Actual GPUI window | 24 | 104/104 | 1 code | 24/24 |
+| Production headless renderer | 24 | 104/104 | 1 code | 24/24 |
+
+The live gate decodes the original source PNGs through GPUI's ordinary image
+path and draws the public `Glass::clear` component. It retains the original
+frame `(100, 200, 768, 320)`, scale 2, inactive/non-key state, accessibility
+settings, display ICC profile, and both repeats. The attached layer remains
+BGRA8 with its actual sRGB color space. The final build includes the normalized
+range clamp in the floating composite. Sources, executable, captures, hashes,
+and scores are sealed in
+`internal-docs/research/clear-live-gpui-2026-10-01/matrix-008`.
+
+Both live chromatic witness pairs remain within one code in both repeats; they
+are not all byte-identical. Dark native values `[151, 86, 94]` / `[148, 90, 93]`
+compare with GPUI `[151, 87, 94]` / `[148, 90, 94]`. Light native values
+`[191, 129, 137]` / `[189, 133, 136]` compare with GPUI `[191, 129, 137]` /
+`[188, 132, 136]`. The headless witnesses are exact. That separate gate uploads
+encoded display-domain control panels through the image atlas; its final
+evidence is sealed in `internal-docs/research/clear-gpui-2026-10-01/matrix-003`.
+
+Public ColorSync supplies the current layer/display parametric RGB conversion
+components. Independent Metal kernels execute those components. Explicit
+Float32-to-Float16 conversion at the input boundary reproduces the observed
+WindowServer conversion; a half UNORM texture accessor alone did not preserve
+that boundary. The material retains a half-float composite until the return
+conversion writes the final layer codes. No captured display matrix or profile
+is embedded in production. Unsupported profile components return an error.
+
+All 34 workspace tests pass with no failures or ignored tests. The public
+component checks cover radius validation, layout, scene ordering, clipping,
+opacity, and accessibility. Compact GPU fixtures retain native Clear samples
+and 144 continuous-corner edge samples. The color check compares 262,144 pixels
+against public ColorSync CPU conversion across sRGB, Display P3, and Adobe RGB
+1998 in both directions. Its limits are one code per channel and at least 99.9%
+exact channels. These checks supplement the full image matrices.
+
+The user approved the fractional-edge reference correction. The reference now
+encodes the opacity-composed face before applying geometric coverage. All 120
+pixels, three origins, both opacities, and the one-code limit remain; the final
+run has zero error. The former failure remains in the historical logs.
+
+Earlier live attempts remain sealed, including a source/executable mismatch
+(`matrix-004`) and a WindowServer acquisition failure (`matrix-007`). Neither
+attempt supplies a passing score. The complete new `matrix-008` stands alone.
+
+These results cover inactive Clear on the measured SDR Apple M5 Max setup,
+macOS 26.4 (25E246). Active and Regular recipes, HDR, and native matching at other
+scales require separate acceptance. The sections below retain earlier
+foundation and research measurements from 2026-09-28 onward; their failed
+candidate scores remain historical evidence.
 
 ## Independent rendering reference
 
@@ -14,8 +72,10 @@ convolution is sampled at destination pixel centers. The production filter uses
 
 Coverage is checked against intersected pixel-cell area on straight edges.
 Composition is checked analytically in linear RGB, including saturation, tint,
-brightness, and ancestor opacity. Thresholds were fixed before the initial run
-and were retained when the initial implementation failed.
+brightness, and ancestor opacity. Geometric coverage applies after encoding,
+as established by the later native edge probes. The initial Gaussian thresholds
+were retained when that implementation failed; the approved coverage-reference
+correction is recorded above.
 
 | Worst observed metric | Initial implementation | Corrected implementation | Acceptance limit |
 | --- | ---: | ---: | ---: |
@@ -883,6 +943,55 @@ comparisons. This diagnostic does not change the original material acceptance
 scores. Captures, frozen inputs, and both scripts are retained in
 `internal-docs/research/clear-radius-source-2026-10-01`.
 
+A public-property observation then recorded `cornerCurve = continuous` on all
+24 inspected SDF layers. Static tracing connects that property to the mode-4
+continuous-corner field. Its radius expansion is `1.528665`; per-axis blending
+approaches a circular corner as the available half-size approaches the radius.
+Both recovered precision variants quantize normalized radial distance to half.
+The optical direction is separate from the distance approximation's derivative.
+
+A frozen field reconstruction was checked against 36 fresh inactive Clear
+captures on black: nine geometries, both appearances, and two images per fresh
+process. All input and acquisition checks passed, and all 18 full-native repeat
+pairs were byte-identical. Both continuous variants had zero endpoint error;
+the ordinary circular-arc model reached 71 codes at the same endpoints.
+
+A subsequent fixed comparison covered every fractional pixel using each image's
+constant central 8×8 face color. Code-space edge composition had maximum errors
+0.893555 / 0.892713 for the half/float fields, with no pixel above one code.
+Linear-sRGB edge composition reached 16.550642 / 16.544530. These results verify
+geometry and gray edge composition conditional on measured face color. They do
+not identify native tint, blur, colored composition, caller inset, or the actual
+precision variant. The original material acceptance was incomplete at this stage.
+Sources, captures, complete pixel checks, and read-only reviews are retained in
+`internal-docs/research/clear-continuous-corners-2026-10-01` and
+`internal-docs/research/clear-continuous-field-2026-10-01`.
+
+The production Metal field was then compared with all 36 original images through
+both glass and opaque-quad rendering: all 72 full-panel comparisons passed,
+with maximum RGB error one code and no pixel above one code. The implementation
+uses float arithmetic in device-pixel units and preserves normalized radial
+half quantization where representable. The experiment archives its source and
+executable in `internal-docs/research/continuous-corner-renderer-2026-10-01`.
+This remains a geometry and constant-gray composition check with measured face
+colors, separate from the then-incomplete material gate. The repository also retains
+144 native edge samples as a compact GPU regression fixture.
+
+The final executable repeated all 72 comparisons after the ordering fix and
+zero-opacity early return, with the same maximum error of one code. Sources,
+executable, images, and a read-only review are retained in
+`internal-docs/research/continuous-corner-final-2026-10-01`. Six alternating
+baseline/current benchmark pairs did not establish a consistent end-to-end
+regression; at scale 2 with two effects, medians were 12.786 / 12.764 ms.
+At that stage, the fractional-edge reference still assumed linear-light
+coverage. The reference-only correction awaited user approval, so those results
+did not establish a successful full-workspace check. The approved correction and
+passing final regression are recorded at the start of this document.
+An additional `--no-fail-fast` run completed every test target: 28 tests passed
+and the unchanged fractional-edge reference was the sole failure. The command
+retained its failing exit status. Its full log is preserved in
+`internal-docs/research/continuous-corner-checks-2026-10-01`.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
@@ -961,6 +1070,18 @@ explicit backing alone did not make this construction renderable. The source,
 observations and failure are sealed in
 `internal-docs/research/clear-carenderer-backed-2026-09-30`.
 
+A displayed-tree transfer then preserved all filter values but initially left
+the target unchanged. Its trace contained only initialization and readback.
+Adding public `CATransaction.flush()` after attachment made the unchanged
+scale-1 transport and effect checks pass: 102,784 control pixels match exactly,
+alpha is full, and both complete frames are byte-identical. The fixed glass
+stripe contains 214 distinct colors against two in its control. This establishes
+a usable local CARenderer path in a new context, without identifying the
+original WindowServer resources or passing the scale-2 material gate. Both
+attempts and their traces are retained in
+`internal-docs/research/clear-carenderer-displayed-2026-10-01` and
+`internal-docs/research/clear-carenderer-committed-2026-10-01`.
+
 A post-hoc diagnostic separated the source color path from spatial weights:
 16,385 and 65,537 fixed sRGB endpoint mixtures were converted with the existing
 ColorSync helper into the capture ICC. Among 2,109 distinct B colors, only six
@@ -1037,8 +1158,9 @@ verified in display RGB still cannot be copied directly into the renderer's
 linear RGB stage: the source/display transform remains part of the model.
 See [Apple's colorspace contract](https://developer.apple.com/documentation/quartzcore/cametallayer/colorspace).
 
-No private filter calls, system shader binaries, or host recipes are used by the
-library. Local inspection tools, raw logs, and provenance remain in the ignored
+The library uses public OS APIs and independently written shaders. Private
+filter calls and system shader binaries remain confined to research. Local
+inspection tools, raw logs, and provenance remain in the ignored
 research directory. The repository's devenv includes Python with NumPy, SciPy,
 Pillow/ImageCms, and Matplotlib for measurement, fitting, and plotting. Run local
 analysis scripts with `devenv shell -- python3 work/<script>.py`; package versions

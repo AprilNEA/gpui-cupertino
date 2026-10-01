@@ -5,12 +5,13 @@ fn main() {
     use std::time::Instant;
 
     use gpui::{
-        Backdrop, Bounds, ContentMask, DevicePixels, PlatformHeadlessRenderer, Quad, ScaledPixels,
-        Scene, point, rgb, size,
+        Backdrop, Bounds, ClearBackdrop, ContentMask, DevicePixels, PlatformHeadlessRenderer, Quad,
+        ScaledPixels, Scene, WindowAppearance, point, rgb, size,
     };
     use gpui_apple::metal_renderer::MetalHeadlessRenderer;
 
     let initialization = Instant::now();
+    let clear = std::env::args().any(|arg| arg == "--clear");
     let mut renderer = MetalHeadlessRenderer::new();
     println!(
         "Renderer initialization, including shader/pipeline creation: {:.3} ms",
@@ -41,10 +42,15 @@ fn main() {
         let frame = rect(0.0, 0.0, 1024.0, 768.0);
         let output_size = size(DevicePixels(1024 * scale), DevicePixels(768 * scale));
         println!(
-            "{}x{}, {scale}x, sigma {} physical px; CPU submission + GPU completion + RGBA readback (not isolated GPU time)",
+            "{}x{}, {scale}x, {} {} physical px; CPU submission + GPU completion + RGBA readback (not isolated GPU time)",
             1024 * scale,
             768 * scale,
-            6 * scale
+            if clear {
+                "Clear radius"
+            } else {
+                "Gaussian sigma"
+            },
+            if clear { 10 * scale } else { 6 * scale }
         );
         for count in 0..=2 {
             let mut scene = Scene::default();
@@ -69,25 +75,38 @@ fn main() {
                 } else {
                     rect(320.0, 260.0, 512.0, 160.0)
                 };
-                scene.insert_primitive(Backdrop {
-                    order: 0,
-                    shape: 0,
-                    bounds,
-                    content_mask: ContentMask { bounds: frame },
-                    corner_radius: ScaledPixels(16.0 * scale_factor),
-                    blur_sigma: ScaledPixels(6.0 * scale_factor),
-                    tint: [0.8, 0.8, 0.8, 0.12],
-                    saturation: 1.1,
-                    brightness: 0.0,
-                    refraction_amount: ScaledPixels(6.0 * scale_factor),
-                    refraction_width: ScaledPixels(12.0 * scale_factor),
-                    direction_mix: 0.0,
-                    dispersion: ScaledPixels(0.5 * scale_factor),
-                    highlight: 0.2,
-                    edge_bleed: 0.0,
-                    scale_factor,
-                    opacity: 1.0,
-                });
+                if clear {
+                    scene.insert_primitive(ClearBackdrop {
+                        order: 0,
+                        scale_factor,
+                        bounds,
+                        content_mask: ContentMask { bounds: frame },
+                        corner_radius: ScaledPixels(16.0 * scale_factor),
+                        blur_radius: ScaledPixels(10.0 * scale_factor),
+                        appearance: WindowAppearance::Light,
+                        opacity: 1.0,
+                    });
+                } else {
+                    scene.insert_primitive(Backdrop {
+                        order: 0,
+                        shape: 0,
+                        bounds,
+                        content_mask: ContentMask { bounds: frame },
+                        corner_radius: ScaledPixels(16.0 * scale_factor),
+                        blur_sigma: ScaledPixels(6.0 * scale_factor),
+                        tint: [0.8, 0.8, 0.8, 0.12],
+                        saturation: 1.1,
+                        brightness: 0.0,
+                        refraction_amount: ScaledPixels(6.0 * scale_factor),
+                        refraction_width: ScaledPixels(12.0 * scale_factor),
+                        direction_mix: 0.0,
+                        dispersion: ScaledPixels(0.5 * scale_factor),
+                        highlight: 0.2,
+                        edge_bleed: 0.0,
+                        scale_factor,
+                        opacity: 1.0,
+                    });
+                }
             }
             scene.finish();
             for _ in 0..3 {

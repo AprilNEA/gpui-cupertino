@@ -63,19 +63,16 @@ struct QuadFragmentInput {
   float4 background_color1 [[flat]];
 };
 
-vertex QuadVertexOutput quad_vertex(uint unit_vertex_id [[vertex_id]],
-                                    uint quad_id [[instance_id]],
-                                    constant float2 *unit_vertices
-                                    [[buffer(QuadInputIndex_Vertices)]],
-                                    constant Quad *quads
-                                    [[buffer(QuadInputIndex_Quads)]],
-                                    constant Size_DevicePixels *viewport_size
-                                    [[buffer(QuadInputIndex_ViewportSize)]]) {
-  float2 unit_vertex = unit_vertices[unit_vertex_id];
-  Quad quad = quads[quad_id];
+QuadVertexOutput quad_vertex_output(float2 unit_vertex, Quad quad,
+                                   constant Size_DevicePixels *viewport_size, float outset) {
+  Bounds_ScaledPixels raster_bounds = quad.bounds;
+  raster_bounds.origin.x -= outset;
+  raster_bounds.origin.y -= outset;
+  raster_bounds.size.width += 2 * outset;
+  raster_bounds.size.height += 2 * outset;
   float4 device_position =
-      to_device_position(unit_vertex, quad.bounds, viewport_size);
-  float4 clip_distance = distance_from_clip_rect(unit_vertex, quad.bounds,
+      to_device_position(unit_vertex, raster_bounds, viewport_size);
+  float4 clip_distance = distance_from_clip_rect(unit_vertex, raster_bounds,
                                                  quad.content_mask.bounds);
   float4 border_color = hsla_to_rgba(quad.border_color);
 
@@ -88,13 +85,49 @@ vertex QuadVertexOutput quad_vertex(uint unit_vertex_id [[vertex_id]],
   );
 
   return QuadVertexOutput{
-      quad_id,
+      0,
       device_position,
       border_color,
       gradient.solid,
       gradient.color0,
       gradient.color1,
       {clip_distance.x, clip_distance.y, clip_distance.z, clip_distance.w}};
+}
+
+vertex QuadVertexOutput quad_vertex(uint vertex_id [[vertex_id]], uint quad_id [[instance_id]],
+    constant float2 *vertices [[buffer(QuadInputIndex_Vertices)]],
+    constant Quad *quads [[buffer(QuadInputIndex_Quads)]],
+    constant Size_DevicePixels *viewport [[buffer(QuadInputIndex_ViewportSize)]]) {
+  QuadVertexOutput output = quad_vertex_output(vertices[vertex_id], quads[quad_id], viewport, 0);
+  output.quad_id = quad_id;
+  return output;
+}
+
+vertex QuadVertexOutput continuous_quad_vertex(uint vertex_id [[vertex_id]], uint quad_id [[instance_id]],
+    constant float2 *vertices [[buffer(QuadInputIndex_Vertices)]],
+    constant Quad *quads [[buffer(QuadInputIndex_Quads)]],
+    constant Size_DevicePixels *viewport [[buffer(QuadInputIndex_ViewportSize)]]) {
+  QuadVertexOutput output = quad_vertex_output(vertices[vertex_id], quads[quad_id], viewport, 1);
+  output.quad_id = quad_id;
+  return output;
+}
+
+fragment float4 continuous_quad_fragment(QuadFragmentInput input [[stage_in]],
+    constant Quad *quads [[buffer(QuadInputIndex_Quads)]]) {
+  Quad quad = quads[input.quad_id];
+  float2 half_size = float2(quad.bounds.size.width, quad.bounds.size.height) * 0.5;
+  float2 point = input.position.xy - float2(quad.bounds.origin.x, quad.bounds.origin.y) - half_size;
+  float radius = clamp(quad.corner_radii.top_left, 0.0, min(half_size.x, half_size.y));
+  float distance = continuous_corner_field(point, half_size, radius).x;
+  float coverage = continuous_corner_coverage(distance);
+  float4 background = fill_color(quad.background, input.position.xy, quad.bounds,
+      input.background_solid, input.background_color0, input.background_color1);
+  float4 color = background;
+  if (quad.border_widths.top > 0) {
+    float border = 1 - continuous_corner_coverage(distance + quad.border_widths.top);
+    color = mix(background, over(background, input.border_color), border);
+  }
+  return color * float4(1, 1, 1, coverage);
 }
 
 fragment float4 quad_fragment(QuadFragmentInput input [[stage_in]],

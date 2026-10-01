@@ -27,7 +27,11 @@ impl BackdropRenderer {
     pub(super) fn new(device: &metal::DeviceRef) -> Result<Self> {
         let library = device
             .new_library_with_source(
-                include_str!("backdrop.metal"),
+                concat!(
+                    include_str!("../continuous_corners.metal"),
+                    "\n",
+                    include_str!("backdrop.metal")
+                ),
                 &metal::CompileOptions::new(),
             )
             .map_err(|error| anyhow!("compiling backdrop shaders: {error}"))?;

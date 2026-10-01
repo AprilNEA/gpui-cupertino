@@ -2716,11 +2716,23 @@ impl Window {
         self.rendered_frame.scene.quads.clone()
     }
 
+    /// Returns continuous quads from the most recently rendered frame.
+    #[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
+    pub fn painted_continuous_quads(&self) -> Vec<Quad> {
+        self.rendered_frame.scene.continuous_quads.clone()
+    }
+
     /// Returns backdrop primitives from the most recently rendered frame.
     /// Bounds and masks are in scaled pixels, matching [`Self::painted_quads`].
     #[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
     pub fn painted_backdrops(&self) -> Vec<crate::Backdrop> {
         self.rendered_frame.scene.backdrops.clone()
+    }
+
+    /// Returns Clear primitives from the most recently rendered frame.
+    #[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
+    pub fn painted_clear_backdrops(&self) -> Vec<crate::ClearBackdrop> {
+        self.rendered_frame.scene.clear_backdrops.clone()
     }
 
     /// Returns the underlines in the most recently rendered frame's scene.
@@ -4529,6 +4541,31 @@ impl Window {
         });
     }
 
+    /// Paint inactive Clear glass over earlier opaque SDR window contents.
+    ///
+    /// Requires an Apple GPU. Creates the same paint-order boundary as
+    /// [`Self::paint_backdrop`] and inherits the current clip and opacity.
+    #[cfg(target_os = "macos")]
+    pub fn paint_clear_backdrop(&mut self, backdrop: crate::PaintClearBackdrop) {
+        self.invalidator.debug_assert_paint();
+        let scale_factor = self.scale_factor();
+        let content_mask = self.snapped_content_mask();
+        let opacity = self.element_opacity();
+        let appearance = self.appearance();
+        self.next_frame
+            .scene
+            .insert_primitive(crate::ClearBackdrop {
+                order: 0,
+                scale_factor,
+                bounds: backdrop.bounds.scale(scale_factor),
+                content_mask,
+                corner_radius: backdrop.corner_radius.scale(scale_factor),
+                blur_radius: backdrop.blur_radius.scale(scale_factor),
+                appearance,
+                opacity,
+            });
+    }
+
     /// Paint one or more quads into the scene for the next frame at the current stacking context.
     /// Quads are colored rectangular regions with an optional background, border, and corner radius.
     /// see [`fill`], [`outline`], and [`quad`] to construct this type.
@@ -4541,19 +4578,11 @@ impl Window {
     pub fn paint_quad(&mut self, quad: PaintQuad) {
         self.invalidator.debug_assert_paint();
 
-        let opacity = self.element_opacity();
         let snapped_bounds = self.snap_bounds(quad.bounds);
         let snapped_border_widths = self.snap_border_widths(quad.border_widths);
-        let quad = Quad {
-            order: 0,
-            bounds: snapped_bounds,
-            content_mask: self.snapped_content_mask(),
-            background: quad.background.opacity(opacity),
-            border_color: quad.border_color.opacity(opacity),
-            corner_radii: quad.corner_radii.scale(self.scale_factor()),
-            border_widths: snapped_border_widths,
-            border_style: quad.border_style,
-        };
+        let mut quad = self.prepare_quad(quad);
+        quad.bounds = snapped_bounds;
+        quad.border_widths = snapped_border_widths;
 
         if !quad.background.is_transparent() {
             self.next_frame.scene.insert_primitive(quad);
@@ -4603,6 +4632,38 @@ impl Window {
                     ..quad
                 });
             }
+        }
+    }
+
+    /// Paint an equal-radius continuous quad with an optional uniform solid border.
+    ///
+    /// Requires the native macOS Metal renderer. Bounds and border widths retain
+    /// fractional device pixels. The radius is clamped to half the shorter dimension.
+    ///
+    /// # Panics
+    /// Panics for unequal corner radii, unequal border widths, or a dashed border.
+    #[cfg(target_os = "macos")]
+    pub fn paint_continuous_quad(&mut self, quad: PaintQuad) {
+        self.invalidator.debug_assert_paint();
+        let quad = self.prepare_quad(quad);
+        // ponytail: continuous outlines shade their bounds; split strips if profiling shows a fill cost.
+        self.next_frame
+            .scene
+            .insert_primitive(crate::Primitive::ContinuousQuad(quad));
+    }
+
+    fn prepare_quad(&self, quad: PaintQuad) -> Quad {
+        let scale = self.scale_factor();
+        let opacity = self.element_opacity();
+        Quad {
+            order: 0,
+            bounds: quad.bounds.scale(scale),
+            content_mask: self.snapped_content_mask(),
+            background: quad.background.opacity(opacity),
+            border_color: quad.border_color.opacity(opacity),
+            corner_radii: quad.corner_radii.scale(scale),
+            border_widths: quad.border_widths.scale(scale),
+            border_style: quad.border_style,
         }
     }
 

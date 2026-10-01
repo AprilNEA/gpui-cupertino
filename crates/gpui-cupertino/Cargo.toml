@@ -20,7 +20,7 @@ gpui = { version = "0.2.2", path = "../../vendor/crates/gpui" }
 anyhow = "1.0.104"
 gpui = { path = "../../vendor/crates/gpui", features = ["test-support"] }
 gpui_apple = { path = "../../vendor/crates/gpui_apple", features = ["test-support"] }
-gpui_platform = { path = "../../vendor/crates/gpui_platform" }
+gpui_platform = { path = "../../vendor/crates/gpui_platform", features = ["test-support"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6.2"

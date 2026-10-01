@@ -16,6 +16,7 @@ mod macos_build {
 
     pub fn run() {
         let header_path = generate_shader_bindings();
+        println!("cargo:rerun-if-changed=./src/continuous_corners.metal");
 
         #[cfg(feature = "runtime_shaders")]
         emit_stitched_shaders(&header_path);
@@ -110,7 +111,8 @@ mod macos_build {
         fn stitch_header(header: &Path, shader_path: &Path) -> std::io::Result<PathBuf> {
             let header_contents = std::fs::read_to_string(header)?;
             let shader_contents = std::fs::read_to_string(shader_path)?;
-            let stitched_contents = format!("{header_contents}\n{shader_contents}");
+            let corners = std::fs::read_to_string("./src/continuous_corners.metal")?;
+            let stitched_contents = format!("{header_contents}\n{corners}\n{shader_contents}");
             let out_path =
                 PathBuf::from(env::var("OUT_DIR").unwrap()).join("stitched_shaders.metal");
             std::fs::write(&out_path, stitched_contents)?;
@@ -136,7 +138,9 @@ mod macos_build {
         // location is the build's canonical output directory, never the
         // checkout (corgi rejects artifacts that embed the build path).
         let staged_shader_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("shaders.metal");
-        std::fs::copy(shader_path, &staged_shader_path).unwrap();
+        let corners = std::fs::read_to_string("./src/continuous_corners.metal").unwrap();
+        let shaders = std::fs::read_to_string(shader_path).unwrap();
+        std::fs::write(&staged_shader_path, format!("{corners}\n{shaders}")).unwrap();
 
         let output = Command::new("xcrun")
             .args([

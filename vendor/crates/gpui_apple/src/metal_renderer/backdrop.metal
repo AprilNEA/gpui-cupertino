@@ -51,18 +51,9 @@ float2 safe_direction(float2 v) {
     return len > 0.00001 ? v / len : float2(0);
 }
 float3 shape_field(float2 p, float2 half_size, float radius, int kind) {
-    float2 n;
-    float d;
-    if (kind == 2) {
-        d = length(p) - min(half_size.x, half_size.y);
-        n = safe_direction(p);
-    } else {
-        radius = kind == 1 ? min(half_size.x, half_size.y) : clamp(radius, 0.0, min(half_size.x, half_size.y));
-        float2 q = abs(p) - half_size + radius;
-        d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
-        n = any(q > 0.0) ? sign(p) * safe_direction(max(q, 0.0)) : (q.x > q.y ? float2(sign(p.x),0) : float2(0,sign(p.y)));
-    }
-    return float3(d, n);
+    if (kind == 2) half_size = float2(min(half_size.x, half_size.y));
+    radius = kind == 0 ? clamp(radius, 0.0, min(half_size.x, half_size.y)) : min(half_size.x, half_size.y);
+    return continuous_corner_field(p, half_size, radius);
 }
 float profile(float d, float width) {
     float t = saturate(-d / width);
@@ -75,8 +66,8 @@ fragment float4 backdrop_fragment(BackdropVertex v [[stage_in]], constant Backdr
     float4 background = original.sample(filtered, uv);
     float2 local = p - u.bounds.xy - u.bounds.zw * 0.5;
     float3 field = shape_field(local, u.bounds.zw * 0.5, u.shape.x, int(u.shape.y));
-    float coverage = saturate(0.5 - field.x / max(fwidth(field.x), 0.0001)) * u.shape.w;
-    if (coverage <= 0) return background;
+    float coverage = continuous_corner_coverage(field.x);
+    if (coverage <= 0 || u.shape.w == 0) return background;
     if (u.shape.z == 0 && u.tint.a == 0 && u.optics.x == 0 && u.optics.w == 0 && u.color.x == 1 && u.color.y == 0 && u.color.z == 0 && u.color.w == 0) return background;
     float2 radial = safe_direction(local / max(u.bounds.zw * 0.5, float2(0.0001)));
     float2 direction = safe_direction(mix(field.yz, radial, u.optics.z));
@@ -104,6 +95,7 @@ fragment float4 backdrop_fragment(BackdropVertex v [[stage_in]], constant Backdr
     }
     float highlight = saturate(1 + field.x / (1.5 * u.viewport.w)) * saturate(dot(field.yz, normalize(float2(-0.6,-0.8)))) * u.color.z;
     color = mix(color, float3(1), highlight);
-    // Known opaque SDR background; all optical/filter work occurs in linear RGB.
-    return float4(to_srgb(mix(to_linear(background.rgb), color, coverage)), background.a);
+    // Ancestor opacity remains linear; geometric edge coverage blends encoded window values.
+    float3 face = to_srgb(mix(to_linear(background.rgb), color, u.shape.w));
+    return float4(mix(background.rgb, face, coverage), background.a);
 }

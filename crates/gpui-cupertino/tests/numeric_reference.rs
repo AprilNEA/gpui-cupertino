@@ -334,11 +334,12 @@ fn fractional_straight_edges_cover_intersected_pixel_cells() {
                 ..material(rect([origin, 8.0, 16.0, 16.0]), 1)
             });
             let image = render(&mut renderer, scene, [35, 33]);
+            let face = 255.0 * (1.055 * f64::from(opacity).powf(1.0 / 2.4) - 0.055);
             for x in 7..27 {
                 let coverage = ((x as f64 + 1.0).min(f64::from(origin) + 16.0)
                     - (x as f64).max(f64::from(origin)))
                 .clamp(0.0, 1.0);
-                let expected = encoded(coverage * f64::from(opacity));
+                let expected = (coverage * face).round() as u8;
                 let actual = image[16 * 35 + x][0];
                 let error = actual.abs_diff(expected);
                 max_error = max_error.max(error);

@@ -7,8 +7,8 @@ Apple-inspired components, materials, and motion for GPUI.
 | `cupertino` | Framework-independent design values and motion primitives. |
 | `gpui-cupertino` | GPUI components, rendering, and interaction; depends on `cupertino`. |
 
-The first implementation provides window-local glass on macOS Metal: analytic
-shapes, blur, tint, refraction, dispersion, highlights, and accessibility fallbacks.
+The implementation provides window-local glass on macOS Metal: inactive Clear,
+configurable Gaussian materials, continuous outlines, and accessibility fallbacks.
 Motion delegates to GPUI springs. Publishing remains disabled while the API and
 license are being defined.
 
@@ -17,18 +17,21 @@ dependency boundaries, and [material rendering](docs/materials.md) for the rende
 contract and current limits.
 
 ```rust
-use cupertino::materials::{GlassMaterial, GlassMaterialOptions, GlassShape};
-use gpui::{div, prelude::*};
+use cupertino::materials::{ClearGlassMaterial, GlassShape};
+use gpui::{div, prelude::*, px};
 use gpui_cupertino::materials::Glass;
 
-let material = GlassMaterial::try_from(GlassMaterialOptions {
-    shape: GlassShape::Capsule,
-    blur_sigma: 8.0,
-    tint: [1.0, 1.0, 1.0, 0.12], // Linear RGBA.
-    ..Default::default()
-})?;
-let toolbar = Glass::new(material, div().px_4().py_2().child("Library"));
+let material = ClearGlassMaterial::new(
+    GlassShape::RoundedRectangle { corner_radius: 20.0 },
+    10.0,
+)?;
+let panel = Glass::clear(material, div().w(px(240.0)).h(px(128.0)).child("Library"));
 ```
+
+Clear requires an Apple GPU. Its host blur radius is distinct from Gaussian
+sigma. Actual GPUI window captures pass all 24 images and 104 reference regions
+on the measured SDR setup. See [validation results](docs/validation.md) for the
+one-code error limit and supported scope.
 
 ## Development
 

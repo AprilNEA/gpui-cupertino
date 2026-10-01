@@ -9,6 +9,7 @@ use gpui::{
 struct Probe {
     shape: GlassShape,
     accessibility: GlassAccessibility,
+    clear: bool,
 }
 
 impl Render for Probe {
@@ -29,9 +30,8 @@ impl Render for Probe {
                 .overflow_hidden()
                 .opacity(0.4)
                 .child(
-                    Glass::new(
-                        material,
-                        div().relative().w(px(100.0)).h(px(40.0)).child(
+                    {
+                        let content = div().relative().w(px(100.0)).h(px(40.0)).child(
                             div()
                                 .absolute()
                                 .left(px(52.0))
@@ -39,8 +39,16 @@ impl Render for Probe {
                                 .w(px(1.0))
                                 .h(px(16.0))
                                 .bg(rgb(0xffffff)),
-                        ),
-                    )
+                        );
+                        if self.clear {
+                            Glass::clear(
+                                ClearGlassMaterial::new(self.shape, 10.0).unwrap(),
+                                content,
+                            )
+                        } else {
+                            Glass::new(material, content)
+                        }
+                    }
                     .accessibility(self.accessibility),
                 ),
         )
@@ -52,15 +60,79 @@ fn open(cx: &mut TestAppContext, shape: GlassShape) -> WindowHandle<Probe> {
     let window = cx.open_window(size(px(160.0), px(80.0)), move |_, _| Probe {
         shape,
         accessibility: GlassAccessibility::default(),
+        clear: false,
     });
     cx.run_until_parked();
     window
 }
 
+#[gpui::test]
+fn clear_retains_radius_layout_order_clip_opacity_and_accessibility(cx: &mut TestAppContext) {
+    let handle = open(
+        cx,
+        GlassShape::RoundedRectangle {
+            corner_radius: 12.0,
+        },
+    );
+    handle
+        .update(cx, |view, _, cx| {
+            view.clear = true;
+            cx.notify();
+        })
+        .unwrap();
+    for scale in [1.0, 2.0] {
+        cx.simulate_window_scale_factor_change(handle.into(), scale);
+        cx.run_until_parked();
+        let (clear, quads) = handle
+            .update(cx, |_, window, _| {
+                (window.painted_clear_backdrops(), window.painted_quads())
+            })
+            .unwrap();
+        assert_eq!(clear.len(), 1);
+        let glass = clear[0];
+        let marker = quads
+            .iter()
+            .find(|quad| quad.bounds.size.width == ScaledPixels(scale))
+            .unwrap();
+        assert_eq!(
+            glass.bounds.size,
+            size(ScaledPixels(100.0 * scale), ScaledPixels(40.0 * scale))
+        );
+        assert_eq!(glass.blur_radius, ScaledPixels(10.0 * scale));
+        assert_eq!(glass.corner_radius, ScaledPixels(12.0 * scale));
+        assert_eq!(glass.content_mask, marker.content_mask);
+        assert_eq!(glass.opacity, 0.4);
+        assert!(glass.order < marker.order);
+        cx.update(|cx| {
+            set_test_preferences(
+                cx,
+                AccessibilityPreferences {
+                    reduce_transparency: true,
+                    ..Default::default()
+                },
+            )
+        });
+        cx.run_until_parked();
+        handle
+            .update(cx, |_, window, _| {
+                assert!(window.painted_clear_backdrops().is_empty());
+                let opaque = window.painted_continuous_quads();
+                assert_eq!(opaque.len(), 1);
+                assert_eq!(opaque[0].bounds, glass.bounds);
+                assert_eq!(opaque[0].content_mask, glass.content_mask);
+            })
+            .unwrap();
+        cx.update(|cx| set_test_preferences(cx, AccessibilityPreferences::default()));
+        cx.run_until_parked();
+    }
+}
+
 fn painted(window: WindowHandle<Probe>, cx: &mut TestAppContext) -> (Vec<Backdrop>, Vec<Quad>) {
     window
         .update(cx, |_, window, _| {
-            (window.painted_backdrops(), window.painted_quads())
+            let mut quads = window.painted_quads();
+            quads.extend(window.painted_continuous_quads());
+            (window.painted_backdrops(), quads)
         })
         .unwrap()
 }
@@ -155,6 +227,12 @@ fn accessibility_replaces_glass_without_changing_outline_clip_or_content(cx: &mu
                     "opaque mode still sampled the background"
                 );
                 assert_eq!(quads.len(), 3);
+                assert_eq!(
+                    window
+                        .update(cx, |_, window, _| window.painted_continuous_quads().len())
+                        .unwrap(),
+                    1
+                );
                 let surface = quads
                     .iter()
                     .find(|quad| quad.bounds == glass.bounds)
