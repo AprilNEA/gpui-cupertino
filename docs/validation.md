@@ -864,6 +864,25 @@ unchanged. Raw captures, exhaustive boundary diagnostics and independent
 reviews are retained in
 `internal-docs/research/clear-inner-zero-awake-2026-10-01`.
 
+A radius comparison then reused the same archived borderless binary with the
+existing rounded-rectangle and capsule options. At fixed 240×128 bounds, each
+appearance ran fresh processes with radii 20, 64, and 20, retaining all twelve
+captures. Input, state, timing, ICC, alpha, and control-panel checks passed.
+All six full-native repeat pairs and all eight restoration pairs were exact.
+The 55,948 pixels with analytical inward depth at least 24 in both shapes were
+unchanged in all sixteen A/B comparisons. Both four-code green witnesses also
+remained unchanged. This radius intervention supplies no evidence of a missing
+radius-dependent blur input in that common deep region.
+
+The full quality gate still failed: dark A0/A1, both repeats, each differed
+from the old bottom-edge baseline at 56 pixels by at most one code, against
+the retained exact-equality requirement. All original center and edge regions
+remain reported, including changes caused by capsule curvature. A separate
+calculation reproduced all 96 A/B regional statistics and the full-panel
+comparisons. This diagnostic does not change the original material acceptance
+scores. Captures, frozen inputs, and both scripts are retained in
+`internal-docs/research/clear-radius-source-2026-10-01`.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
