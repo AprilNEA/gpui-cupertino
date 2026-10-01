@@ -802,6 +802,41 @@ all 28 PNGs and every reported comparison. The complete results are sealed in
 `internal-docs/research/clear-window-origin-settled-2026-10-01`.
 No production parameter or optical acceptance score changed.
 
+A further static and CPU audit tested compact capture allocation with half UV.
+It reproduced all 104 archived first-copy and LPH metrics. With fixed mip
+contents, the compact layout changed custom-checker center green values by
+at most 0.073656 codes in light and 0.077744 in dark. This conditional
+sensitivity cannot explain the four-code witness separation. It does not
+establish the actual native texture contents, allocation, or resource binding.
+
+The recovered collector excludes null sources from its valid surface list.
+The traced half-pixel constants belong to border copies, not interior capture
+UVs. Neither path supplies an arbitrary phase correction. A separate trace
+also followed `gradientOvalization` from its getter through the render subclass
+and uniform packing into the shader. The value mixes shape and radial normals;
+the traced branch retains its original distance. This direction adjustment
+cannot change a sample with zero displacement magnitude. These findings and
+the complete CPU sensitivity results are sealed in
+`internal-docs/research/clear-source-geometry-2026-10-01`.
+
+A declared inner-refraction intervention froze 2,259 reviewed inputs after
+strict compilation, an owned-filter API check, and 45 checker rejection cases.
+The intervention would change only inner amount from -60 to 0 and restore it.
+Static analysis confirmed that this also changes the complex-refraction branch;
+it is not a displacement-only test.
+
+The first A0 screenshot failed before any intervention or PNG output.
+`screencapture` returned 1 with "could not create image from window"; the
+probe stopped at its original capture-success assertion. The independent
+checker retained the failed process gate. Before and after sessions were
+unlocked, but a later public CoreGraphics query found both online displays
+asleep and inactive. A separate screen-capture permission query returned true.
+These later observations do not establish the screenshot's exact display state.
+New captures require awake displays and a new experiment directory. No A/B
+comparison or new optical score exists. Frozen inputs, the crash report,
+diagnostics and independent review are retained in
+`internal-docs/research/clear-inner-zero-2026-10-01`.
+
 The omitted-base first-pass investigation recovered two specific operations:
 explicit half-precision 2×2 averaging before the compute kernel, and a raster
 kernel with source-texel offsets 1.960085 / 3.920676. Static shader-name tables
