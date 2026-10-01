@@ -46,6 +46,8 @@ and 144 continuous-corner edge samples. The color check compares 262,144 pixels
 against public ColorSync CPU conversion across sRGB, Display P3, and Adobe RGB
 1998 in both directions. Its limits are one code per channel and at least 99.9%
 exact channels. These checks supplement the full image matrices.
+The final regression, Clippy, formatting, and build logs are sealed with the
+checked sources in `internal-docs/research/clear-final-checks-2026-10-01`.
 
 The user approved the fractional-edge reference correction. The reference now
 encodes the opacity-composed face before applying geometric coverage. All 120
@@ -61,6 +63,39 @@ macOS 26.4 (25E246). Active and Regular recipes, HDR, and native matching at oth
 scales require separate acceptance. The sections below retain earlier
 foundation and research measurements from 2026-09-28 onward; their failed
 candidate scores remain historical evidence.
+
+## Live Clear performance, 2026-10-01
+
+The release build measured the actual attached GPUI window at 1536×640 device
+pixels, scale 2, on the original light orange/blue checker. Both WindowServer
+captures retained the original ICC profile, exact complete control panel, and
+one-code material-region limit. The sample uses the same source revision as the
+final complete visual matrices.
+
+Each effect count has three discarded warmups and 20 retained samples. The
+measurement includes CPU submission, GPU completion, RGBA readback, and image
+disposal. Clear counts 1 and 2 include the live public ColorSync conversion.
+The two materials overlap, and the fixture checks the painted primitive count
+before measurement.
+
+| Clear effects | Median | p95 |
+| --- | ---: | ---: |
+| 0 | 2.825 ms | 3.840 ms |
+| 1 | 4.767 ms | 5.854 ms |
+| 2 | 4.246 ms | 6.981 ms |
+
+These short, sequential samples show variable latency; their nonmonotonic
+medians do not establish per-effect scaling or a sustained frame rate. The
+earlier headless timings exclude live color conversion and use different
+framebuffer dimensions.
+
+The sampler ran after the external build/test processes ended. The next
+observed Cargo build began at 23:59:05, after this run finished at 23:58:50.
+The frozen executable, sources, arguments, both captures, image checks, and all
+60 timing samples are sealed in
+`internal-docs/research/clear-live-performance-2026-10-01/window-001`.
+A full-panel native/GPUI comparison for both appearances is available locally
+at `internal-docs/research/clear-live-review-2026-10-01/comparison.png`.
 
 ## Independent rendering reference
 
@@ -133,7 +168,7 @@ Common-time positions at 60/120 Hz, including a dropped frame, differ by less
 than 0.05 logical pixels. The resumed trajectory agrees with a fresh spring
 within 0.01 logical pixels.
 
-## Performance sample
+## Earlier Gaussian performance sample
 
 An optimized build rendered 20 measured frames after three warmups. Temporary
 instrumentation read public Metal command-buffer GPU start/end timestamps after
