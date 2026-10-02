@@ -5,6 +5,9 @@
 /// Framework-independent foundations shared by Cupertino integrations.
 pub use cupertino;
 
+pub mod components;
+pub mod theme;
+
 /// GPUI spring animation builders using Cupertino's validated design parameters.
 pub mod motion;
 

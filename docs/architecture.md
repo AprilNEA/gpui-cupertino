@@ -9,6 +9,8 @@ window systems, GPU resources, and platform APIs.
 | `crates/cupertino/src/motion.rs` | Validated spring parameters and presets; no animation scheduler. |
 | `crates/gpui-cupertino/src/materials.rs` | Glass element, GPUI paint boundary, opaque accessibility fallback. |
 | `crates/gpui-cupertino/src/motion.rs` | Convert spring parameters to GPUI's existing spring animation. |
+| `crates/gpui-cupertino/src/theme.rs` | Semantic light and dark colors shared by controls. |
+| `crates/gpui-cupertino/src/components/` | Reusable controls with GPUI input, focus, and accessibility behavior. |
 | `crates/gpui-cupertino/src/platform.rs` | Public AppKit accessibility preference observation. |
 | `crates/gpui-cupertino/examples/` | Runnable interaction and material checks. |
 | `crates/gpui-cupertino/tests/` | Scene ordering and actual Metal output regression tests. |
@@ -17,8 +19,8 @@ window systems, GPU resources, and platform APIs.
 | `docs/` | Public architecture and implementation contracts. |
 | `internal-docs/` | Ignored local research; never part of the source distribution. |
 
-The remaining `design/`, `components/`, and `theme/` placeholders do not expose
-APIs. Add shared modules when actual components need them. Keep component state,
+The remaining core `design/` placeholder does not expose APIs.
+Add shared modules when actual components need them. Keep component state,
 input, focus, and accessibility behavior beside the component.
 
 The vendored GPUI dependency closure is a separate workspace, pinned to the
