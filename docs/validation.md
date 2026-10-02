@@ -192,6 +192,19 @@ sharing captures must preserve the current numerical and paint-order checks.
 
 ## Reproduction and native comparison
 
+The isolated probe also accepts `--window-state active`. The default remains
+inactive. Active probes use a borderless window that can become key, confirm
+application and window focus, then wait five seconds before the first capture.
+Every recorded capture checkpoint must retain that state. Logs include the
+window frame and public display headroom values. Focus changes between
+checkpoints are not continuously monitored. Active captures have an `-active`
+filename suffix and explicit state metadata; they do not extend the inactive
+Clear acceptance result.
+
+```sh
+devenv shell -- cargo run -p gpui-cupertino --example native_compare --locked -- work/active-clear probe --background solid:808080 --shape roundrect --appearance light --style clear --window-state active
+```
+
 ```sh
 devenv test
 devenv shell -- cargo test -p gpui-cupertino --test numeric_reference --locked -- --nocapture

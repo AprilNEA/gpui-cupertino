@@ -9,6 +9,23 @@ use gpui::{DevicePixels, PlatformHeadlessRenderer, Scene, size};
 use gpui_apple::metal_renderer::MetalHeadlessRenderer;
 use std::path::Path;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) enum WindowState {
+    #[default]
+    Inactive,
+    Active,
+}
+
+impl WindowState {
+    pub(super) fn is_active(self) -> bool {
+        self == Self::Active
+    }
+
+    pub(super) fn matches(self, active: bool, key: bool) -> bool {
+        active == self.is_active() && key == self.is_active()
+    }
+}
+
 enum Shape {
     Roundrect,
     Capsule,
@@ -40,6 +57,7 @@ pub(super) struct Probe {
     pub(super) dark: bool,
     pub(super) clear: bool,
     pub(super) capture_count: u32,
+    pub(super) window_state: WindowState,
 }
 
 impl Probe {
@@ -47,11 +65,23 @@ impl Probe {
         let (mut background, mut shape, mut dark, mut clear) = (None, None, None, None);
         let (mut dimensions, mut offset) = (None, None);
         let mut capture_count = None;
+        let mut window_state = None;
         while let Some(flag) = args.next() {
             let value = args
                 .next()
                 .with_context(|| format!("{flag} needs a value"))?;
             match flag.as_str() {
+                "--window-state" => {
+                    let state = match value.as_str() {
+                        "inactive" => WindowState::Inactive,
+                        "active" => WindowState::Active,
+                        _ => bail!("window state must be inactive or active"),
+                    };
+                    ensure!(
+                        window_state.replace(state).is_none(),
+                        "duplicate --window-state"
+                    );
+                }
                 "--background" => ensure!(
                     background.replace(Background::parse(&value)?).is_none(),
                     "duplicate --background"
@@ -132,6 +162,7 @@ impl Probe {
             dark: dark.context("probe requires --appearance")?,
             clear: clear.context("probe requires --style")?,
             capture_count: capture_count.unwrap_or(2),
+            window_state: window_state.unwrap_or_default(),
         };
         let [x, y, width, height, _] = probe.geometry();
         ensure!(
@@ -157,8 +188,13 @@ impl Probe {
         } else {
             format!("-count{}", self.capture_count)
         };
+        let state = if self.window_state.is_active() {
+            "-active"
+        } else {
+            ""
+        };
         format!(
-            "probe-{}-{}-{}{size}{offset}-{}{count}",
+            "probe-{}-{}-{}{size}{offset}-{}{count}{state}",
             if self.dark { "dark" } else { "light" },
             if self.clear { "clear" } else { "regular" },
             self.shape.name(),
@@ -223,6 +259,7 @@ impl Probe {
             .collect::<Vec<_>>()
             .join(", ");
         let [x, y, w, h, radius] = self.geometry();
+        let active = self.window_state.is_active();
         format!(
             r#"{{
   "case": "{name}",
@@ -238,7 +275,7 @@ impl Probe {
   "capture_content_origin_device": [0, {}],
   "scale": {scale},
   "glass": {{"shape": "{}", "bounds_logical": [{x}, {y}, {w}, {h}], "corner_radius_logical": {radius}}},
-  "required_window_state": {{"visible": true, "active": false, "key": false}},
+  "required_window_state": {{"visible": true, "active": {active}, "key": {active}}},
   "background_png": "{name}-background.png",
   "captures": [{captures}]
 }}
@@ -272,6 +309,40 @@ mod tests {
             .chain(options.iter().copied())
             .map(str::to_owned),
         )
+    }
+
+    #[test]
+    fn window_state_preserves_inactive_metadata_and_rejects_partial_activation() -> Result<()> {
+        let default = probe("roundrect", "step:v", &[])?;
+        let inactive = probe("roundrect", "step:v", &["--window-state", "inactive"])?;
+        assert_eq!(default.metadata(2.0, 0.0), inactive.metadata(2.0, 0.0));
+        let active = probe("roundrect", "step:v", &["--window-state", "active"])?;
+        assert_eq!(active.name(), "probe-light-clear-roundrect-step-v-active");
+        assert!(
+            active
+                .metadata(2.0, 0.0)
+                .contains(r#""active": true, "key": true"#)
+        );
+        for (app_active, key) in [(false, false), (false, true), (true, false), (true, true)] {
+            assert_eq!(
+                inactive.window_state.matches(app_active, key),
+                !app_active && !key
+            );
+            assert_eq!(
+                active.window_state.matches(app_active, key),
+                app_active && key
+            );
+        }
+        assert!(probe("roundrect", "step:v", &["--window-state", "focused"]).is_err());
+        assert!(
+            probe(
+                "roundrect",
+                "step:v",
+                &["--window-state", "active", "--window-state", "inactive"]
+            )
+            .is_err()
+        );
+        Ok(())
     }
 
     #[test]

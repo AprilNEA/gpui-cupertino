@@ -1,6 +1,9 @@
 //! Advance captures between turns of the real AppKit application event loop.
 
-use super::{comparison::*, probe::Probe};
+use super::{
+    comparison::*,
+    probe::{Probe, WindowState},
+};
 use anyhow::{Context, Result, bail, ensure};
 use gpui::{DevicePixels, PlatformHeadlessRenderer, size};
 use gpui_apple::metal_renderer::MetalHeadlessRenderer;
@@ -27,8 +30,9 @@ enum Case {
 #[derive(Clone, Copy)]
 enum Stage {
     Prepare,
-    Deactivate,
-    AwaitInactive { deadline: Instant },
+    SetWindowState,
+    AwaitWindowState { deadline: Instant },
+    Settled,
     AfterCapture { repeat: u32 },
 }
 
@@ -42,11 +46,28 @@ struct Session {
     stage: Stage,
     capture_count: u32,
     prepared_at: Instant,
+    window_state: WindowState,
 }
+
+define_class!(
+    // SAFETY: The subclass only changes public key-window eligibility on the main thread.
+    #[unsafe(super = NSWindow)]
+    #[thread_kind = MainThreadOnly]
+    struct ActiveProbeWindow;
+
+    unsafe impl NSObjectProtocol for ActiveProbeWindow {}
+    impl ActiveProbeWindow {
+        #[unsafe(method(canBecomeKeyWindow))]
+        fn can_become_key_window(&self) -> bool { true }
+    }
+);
 
 impl Session {
     fn new(directory: PathBuf, probe: Option<Probe>, mtm: MainThreadMarker) -> Self {
         let capture_count = probe.as_ref().map_or(2, |probe| probe.capture_count);
+        let window_state = probe
+            .as_ref()
+            .map_or(WindowState::Inactive, |probe| probe.window_state);
         // Calibration inputs must not include the window decoration's alpha mask.
         let style = if probe.is_some() {
             NSWindowStyleMask::Borderless
@@ -67,15 +88,25 @@ impl Session {
                 })
                 .collect()
         };
-        // SAFETY: main-thread initialization with a valid content rectangle and buffered backing.
-        let window = unsafe {
-            NSWindow::initWithContentRect_styleMask_backing_defer(
-                NSWindow::alloc(mtm),
-                rect(100.0, 200.0, (WIDTH * 2.0).into(), HEIGHT.into()),
-                style,
-                NSBackingStoreType::Buffered,
-                false,
-            )
+        let frame = rect(100.0, 200.0, (WIDTH * 2.0).into(), HEIGHT.into());
+        let window = if window_state.is_active() {
+            let allocated = ActiveProbeWindow::alloc(mtm).set_ivars(());
+            // SAFETY: Initialize the NSWindow superclass on the main thread with a valid rectangle and buffered backing.
+            let window: Retained<ActiveProbeWindow> = unsafe {
+                msg_send![super(allocated), initWithContentRect: frame, styleMask: style, backing: NSBackingStoreType::Buffered, defer: false]
+            };
+            window.into_super()
+        } else {
+            // SAFETY: main-thread initialization with a valid content rectangle and buffered backing.
+            unsafe {
+                NSWindow::initWithContentRect_styleMask_backing_defer(
+                    NSWindow::alloc(mtm),
+                    frame,
+                    style,
+                    NSBackingStoreType::Buffered,
+                    false,
+                )
+            }
         };
         // SAFETY: Rust retains the window; AppKit must not release it again when closed.
         unsafe { window.setReleasedWhenClosed(false) };
@@ -90,6 +121,7 @@ impl Session {
             stage: Stage::Prepare,
             capture_count,
             prepared_at: Instant::now(),
+            window_state,
         }
     }
 
@@ -174,7 +206,7 @@ impl Session {
 
     fn capture(&mut self, app: &NSApplication, repeat: u32) -> Result<Option<f64>> {
         let path = self.capture_path(repeat);
-        validate_capture_state(
+        self.window_state.validate_capture_state(
             &format!("{} before", path.display()),
             app,
             &self.window,
@@ -203,32 +235,54 @@ impl Session {
                     return Ok(None);
                 };
                 self.prepare(case, app, mtm)?;
-                self.stage = Stage::Deactivate;
+                self.stage = Stage::SetWindowState;
                 Ok(Some(0.8))
             }
-            Stage::Deactivate => {
-                app.deactivate();
-                self.record_timing("deactivate", None);
-                self.stage = Stage::AwaitInactive {
+            Stage::SetWindowState => {
+                if self.window_state.is_active() {
+                    self.window.makeKeyAndOrderFront(None);
+                    app.activate();
+                    self.record_timing("activate", None);
+                } else {
+                    app.deactivate();
+                    self.record_timing("deactivate", None);
+                }
+                self.stage = Stage::AwaitWindowState {
                     deadline: Instant::now() + std::time::Duration::from_secs(10),
                 };
                 Ok(Some(5.0))
             }
-            Stage::AwaitInactive { deadline } => {
-                if !app.isActive() && !self.window.isKeyWindow() {
+            Stage::AwaitWindowState { deadline } => {
+                if self
+                    .window_state
+                    .matches(app.isActive(), self.window.isKeyWindow())
+                {
+                    if self.window_state.is_active() {
+                        self.window_state.validate_capture_state(
+                            "active settling begins",
+                            app,
+                            &self.window,
+                            self.scale,
+                        )?;
+                        self.record_timing("active_ready", None);
+                        self.stage = Stage::Settled;
+                        return Ok(Some(5.0));
+                    }
                     return self.capture(app, 0);
                 }
                 ensure!(
                     Instant::now() < deadline,
-                    "native comparison did not reach inactive/non-key state within ten seconds: running={}, active={}, key={}",
+                    "native comparison did not reach {:?} state within ten seconds: running={}, active={}, key={}",
+                    self.window_state,
                     app.isRunning(),
                     app.isActive(),
                     self.window.isKeyWindow()
                 );
                 Ok(Some(0.1))
             }
+            Stage::Settled => self.capture(app, 0),
             Stage::AfterCapture { repeat } => {
-                validate_capture_state(
+                self.window_state.validate_capture_state(
                     &format!("{} after", self.capture_path(repeat).display()),
                     app,
                     &self.window,

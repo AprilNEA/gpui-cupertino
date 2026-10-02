@@ -1,4 +1,4 @@
-//! Capture inactive AppKit glass beside a deterministic Metal readback on the same background.
+//! Capture AppKit glass beside a deterministic Metal readback on the same background.
 //! Run on macOS 26+: `cargo run -p gpui-cupertino --example native_compare -- work/comparison`.
 //! Isolate one case with `OUT probe --background step:v --shape roundrect --appearance light --style regular`.
 //! Optional `--size WIDTHxHEIGHT` centers the shape; circles require equal dimensions.
@@ -7,6 +7,7 @@
 //! `step:v[:phase]` / `step:h[:phase]` shift the edge right/down in half-logical-pixel increments.
 //! Step boundaries must map exactly to device pixels at the current display scale.
 //! `checker:N:phase:RRGGBB:RRGGBB` uses explicit colors; `checker:N[:phase]` keeps appearance palettes.
+//! Probes default to inactive. `--window-state active` checks application and window focus at each recorded capture checkpoint.
 
 #[cfg(target_os = "macos")]
 #[path = "native_compare/background.rs"]
@@ -22,6 +23,7 @@ mod lifecycle;
 
 #[cfg(target_os = "macos")]
 mod comparison {
+    use super::probe::WindowState;
     use anyhow::{Context, Result, ensure};
     use gpui::{Backdrop, Bounds, ContentMask, Quad, ScaledPixels, Scene, point, rgb, size};
     use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, rc::Retained};
@@ -160,36 +162,55 @@ mod comparison {
         native.addSubview(&glass);
     }
 
-    pub(super) fn validate_capture_state(
-        label: &str,
-        app: &NSApplication,
-        window: &NSWindow,
-        expected_scale: f64,
-    ) -> Result<()> {
-        let visible = window.isVisible();
-        let active = app.isActive();
-        let key = window.isKeyWindow();
-        let scale = window.backingScaleFactor();
-        let workspace = NSWorkspace::sharedWorkspace();
-        let reduce_transparency = workspace.accessibilityDisplayShouldReduceTransparency();
-        let increase_contrast = workspace.accessibilityDisplayShouldIncreaseContrast();
-        println!(
-            "{label}: window={}, visible={visible}, active={active}, key={key}, scale={scale}, reduce_transparency={reduce_transparency}, increase_contrast={increase_contrast}",
-            window.windowNumber()
-        );
-        ensure!(
-            visible && !active && !key,
-            "{label}: native comparison requires a visible, inactive, non-key window"
-        );
-        ensure!(
-            scale == expected_scale,
-            "{label}: display scale changed from {expected_scale} to {scale}"
-        );
-        ensure!(
-            !reduce_transparency && !increase_contrast,
-            "{label}: native comparison requires Reduce Transparency and Increase Contrast to be disabled"
-        );
-        Ok(())
+    impl WindowState {
+        pub(super) fn validate_capture_state(
+            self,
+            label: &str,
+            app: &NSApplication,
+            window: &NSWindow,
+            expected_scale: f64,
+        ) -> Result<()> {
+            let visible = window.isVisible();
+            let active = app.isActive();
+            let key = window.isKeyWindow();
+            let scale = window.backingScaleFactor();
+            let workspace = NSWorkspace::sharedWorkspace();
+            let reduce_transparency = workspace.accessibilityDisplayShouldReduceTransparency();
+            let increase_contrast = workspace.accessibilityDisplayShouldIncreaseContrast();
+            println!(
+                "{label}: window={}, visible={visible}, active={active}, key={key}, scale={scale}, reduce_transparency={reduce_transparency}, increase_contrast={increase_contrast}",
+                window.windowNumber()
+            );
+            ensure!(
+                visible && self.matches(active, key),
+                "{label}: native comparison requires a visible window in {self:?} state"
+            );
+            ensure!(
+                scale == expected_scale,
+                "{label}: display scale changed from {expected_scale} to {scale}"
+            );
+            ensure!(
+                !reduce_transparency && !increase_contrast,
+                "{label}: native comparison requires Reduce Transparency and Increase Contrast to be disabled"
+            );
+            if self.is_active() {
+                let frame = window.frame();
+                let screen = window
+                    .screen()
+                    .context("active probe must have an attached screen")?;
+                println!(
+                    "ACTIVE_CONTEXT {{\"frame\":[{},{},{},{}],\"headroom\":{},\"potential_headroom\":{},\"reference_headroom\":{}}}",
+                    frame.origin.x,
+                    frame.origin.y,
+                    frame.size.width,
+                    frame.size.height,
+                    screen.maximumExtendedDynamicRangeColorComponentValue(),
+                    screen.maximumPotentialExtendedDynamicRangeColorComponentValue(),
+                    screen.maximumReferenceExtendedDynamicRangeColorComponentValue(),
+                );
+            }
+            Ok(())
+        }
     }
 }
 

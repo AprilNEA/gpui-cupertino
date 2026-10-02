@@ -63,3 +63,5 @@ example has a scrollable
 coordinate grid, reversible spring motion, neighboring glass, and accessibility
 overrides. GPUI is pinned and patched in [vendor/](vendor/README.md); use that
 copy when integrating this workspace.
+The [native comparison procedure](docs/validation.md#reproduction-and-native-comparison)
+supports separate active and inactive material probes.
