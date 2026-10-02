@@ -8,7 +8,8 @@ Apple-inspired components, materials, and motion for GPUI.
 | `gpui-cupertino` | GPUI components, rendering, and interaction; depends on `cupertino`. |
 
 The implementation provides a light/dark theme, buttons, single-line text input,
-and nonmodal popovers. Window-local glass on macOS Metal includes inactive Clear,
+nonmodal popovers, forms, toolbars, scroll areas, and empty states.
+Window-local glass on macOS Metal includes inactive Clear,
 configurable Gaussian materials, continuous outlines, and accessibility fallbacks.
 Motion delegates to GPUI springs. The full component library remains in development;
 publishing is disabled while the API and license are being defined.

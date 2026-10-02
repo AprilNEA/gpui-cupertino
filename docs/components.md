@@ -30,6 +30,10 @@ Opening focuses the panel or the control passed to `initial_focus`. When focus i
 
 ## Verification
 
+See [forms and scrolling](layout.md) for Form, FormSection, FormField, Toolbar,
+ScrollArea, and EmptyState. The containers preserve child control ownership;
+ScrollArea adds focused keyboard scrolling and accessibility scroll actions.
+
 Run `devenv test` before committing. The workspace checks compile the showcase and verify input editing, platform IME calls, pointer and keyboard dispatch, focus restoration, panel placement, accessibility trees and actions, and the existing Metal material regressions.
 
 Run `cargo run -p gpui-cupertino --example components --locked` in `devenv shell` for native acceptance. Verify Chinese composition, candidate placement after horizontal scrolling, Tab traversal, Escape dismissal, light and dark appearance, and VoiceOver. Record native acceptance separately from simulated checks.

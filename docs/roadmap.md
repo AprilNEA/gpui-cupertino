@@ -13,7 +13,7 @@ Acceptance must include three runnable compositions: a settings form, a searchab
 | Rendering and motion foundations | Gaussian materials, inactive Clear on Apple GPUs, continuous outlines, accessibility fallbacks, GPUI spring integration | Implemented with scoped material and motion regressions. |
 | First component foundation | Semantic light/dark palette, Button, single-line TextInput, nonmodal Popover, settings showcase, accessibility test support | Implemented; native Chinese IME and VoiceOver acceptance remains. |
 | Form controls | Toggle, Checkbox, RadioGroup, Slider, Stepper, SegmentedControl, progress and loading states | Planned. Reuse the theme, focus, input, and event contracts. |
-| Navigation and layout | Form groups, toolbar, sidebar, tabs, split view, scrolling, empty states | Planned. Define composition contracts before parallel implementation. |
+| Navigation and layout | Form groups, toolbar, sidebar, tabs, split view, scrolling, empty states | Form groups, toolbar, scrolling, and empty states are implemented. Sidebar, tabs, and split view are in progress. |
 | Collections | Virtual lists, selection, search, tables, sorting, resizing, drag and drop | Planned. Reuse GPUI list and drag primitives. |
 | Menus and panels | Menus, tooltips, dialogs, sheets, nested floating panels | Planned. Resolve dismissal, focus, and stacking ownership first. |
 | Integrated acceptance | Settings form, searchable multiple-selection list, detail panel, native input/accessibility checks, performance baselines | Initial settings showcase exists. The remaining scenarios and release checks are pending. |

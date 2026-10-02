@@ -9,6 +9,8 @@ window systems, GPU resources, and platform APIs.
 | `crates/cupertino/src/motion.rs` | Validated spring parameters and presets; no animation scheduler. |
 | `crates/gpui-cupertino/src/theme.rs` | Semantic colors resolved from the GPUI window appearance. |
 | `crates/gpui-cupertino/src/components/` | Controls with retained input, focus, and accessibility behavior. |
+| `crates/gpui-cupertino/src/components/layout.rs` | Form composition, toolbars, and empty states. |
+| `crates/gpui-cupertino/src/components/scroll_area.rs` | Scroll viewport, retained offset, and keyboard/accessibility scrolling. |
 | `crates/gpui-cupertino/src/materials.rs` | Glass element, GPUI paint boundary, opaque accessibility fallback. |
 | `crates/gpui-cupertino/src/motion.rs` | Convert spring parameters to GPUI's existing spring animation. |
 | `crates/gpui-cupertino/src/platform.rs` | Public AppKit accessibility preference observation. |
@@ -21,8 +23,7 @@ window systems, GPU resources, and platform APIs.
 | `internal-docs/` | Ignored local research; never part of the source distribution. |
 
 Components share the GPUI theme and reuse GPUI event dispatch, focus handles,
-anchored layout, deferred painting, and platform input handlers. The independent
-`design/` placeholder does not expose an API. Add core design values only when a
+anchored layout, deferred painting, and platform input handlers. Add core design values only when a
 framework-independent consumer needs them. Keep component state, input, focus,
 and accessibility behavior beside the component. See
 [component contracts](components.md) and [the roadmap](roadmap.md).
