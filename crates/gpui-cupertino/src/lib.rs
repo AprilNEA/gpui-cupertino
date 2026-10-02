@@ -5,6 +5,7 @@
 /// Framework-independent foundations shared by Cupertino integrations.
 pub use cupertino;
 
+/// Reusable Cupertino controls and containers.
 pub mod components;
 pub mod theme;
 
