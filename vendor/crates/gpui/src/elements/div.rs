@@ -2242,6 +2242,13 @@ impl Interactivity {
                     }
                 }
 
+                // Removing the click handler must cancel a key press before a later render restores the handler.
+                if self.click_listeners.is_empty()
+                    && let Some(element_state) = element_state.as_mut()
+                {
+                    element_state.pending_keyboard_down = None;
+                }
+
                 // Ensure we store a focus handle in our element state if we're focusable.
                 // If there's an explicit focus handle we're tracking, use that. Otherwise
                 // create a new handle and store it in the element state, which lives for as
