@@ -361,10 +361,14 @@ pub(super) fn run() -> Result<()> {
     std::fs::create_dir_all(&directory)?;
     let mtm = MainThreadMarker::new().context("reference app must run on the main thread")?;
     let app = NSApplication::sharedApplication(mtm);
-    ensure!(
-        app.setActivationPolicy(NSApplicationActivationPolicy::Regular),
-        "activating reference app policy"
-    );
+    let initial_policy = app.activationPolicy();
+    if initial_policy != NSApplicationActivationPolicy::Regular {
+        ensure!(
+            app.setActivationPolicy(NSApplicationActivationPolicy::Regular),
+            "activating reference app policy (before={initial_policy:?}, after={:?})",
+            app.activationPolicy()
+        );
+    }
     let delegate = CaptureDelegate::new(Session::new(directory, probe, mtm), mtm);
     app.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
     app.run();
