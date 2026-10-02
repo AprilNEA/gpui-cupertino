@@ -64,6 +64,24 @@ scales require separate acceptance. The sections below retain earlier
 foundation and research measurements from 2026-09-28 onward; their failed
 candidate scores remain historical evidence.
 
+## Active material acquisition, 2026-10-02
+
+The active Clear experiment is paused before pixel scoring. Both direct
+execution and LaunchServices launch reached the AppKit event loop but failed
+the active/key requirement. The latest attempt produced source metadata and
+one source-background PNG, but no window captures. A successful `open -W`
+return did not establish application success; the acquisition checker rejected
+the incomplete application records before starting the next case.
+
+The fixed protocol retains nine colors, both appearances, two captures per
+case, exact complete-panel repeats, and a maximum individual RGB error of one
+code. The model, executable, source snapshots, failed launch records, and
+checker are retained in
+`internal-docs/research/active-clear-solids-launchservices-2026-10-02`.
+The user paused acquisition because foreground-window coordination was not
+available. The existing inactive Clear acceptance does not cover active Clear
+or Regular. No production material parameters changed.
+
 ## Live Clear performance, 2026-10-01
 
 The release build measured the actual attached GPUI window at 1536×640 device
@@ -200,6 +218,13 @@ window frame and public display headroom values. Focus changes between
 checkpoints are not continuously monitored. Active captures have an `-active`
 filename suffix and explicit state metadata; they do not extend the inactive
 Clear acceptance result.
+
+Active acquisition requires a foreground graphical session. AppKit's
+[`activate()`](https://developer.apple.com/documentation/appkit/nsapplication/activate%28%29)
+requests focus but does not guarantee activation. Direct execution and a
+LaunchServices bundle both failed that prerequisite in the recorded attempt.
+Keep the probe foreground during capture and require the logged active/key
+checks to pass. A focus failure produces no valid active-material score.
 
 ```sh
 devenv shell -- cargo run -p gpui-cupertino --example native_compare --locked -- work/active-clear probe --background solid:808080 --shape roundrect --appearance light --style clear --window-state active
