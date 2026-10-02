@@ -16,6 +16,8 @@ check support adapter acceptance. Other source files are
 kept at the pinned revision apart from whitespace cleanup. This source workspace is excluded from Cupertino's
 workspace so its upstream examples and tests are not library release targets.
 
+`TestWindow` also retains accessibility callbacks and tree updates. Component tests use these callbacks to activate accessibility and dispatch actions through GPUI's platform path.
+
 The source is included because the background effect requires renderer and
 scene changes not exposed by the upstream public API. Do not substitute an
 unpatched GPUI release. No Apple private resources or shaders are included.

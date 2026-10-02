@@ -1,9 +1,10 @@
 use crate::{
-    AnyWindowHandle, Bounds, DevicePixels, DispatchEventResult, GpuSpecs, HeadlessAtlas, Pixels,
-    PlatformAtlas, PlatformDisplay, PlatformHeadlessRenderer, PlatformInput, PlatformInputHandler,
-    PlatformWindow, Point, PromptButton, RequestFrameOptions, Scene, Size, TestPlatform,
-    TextInputConfiguration, TextInputStateChange, WindowAppearance, WindowBackgroundAppearance,
-    WindowBounds, WindowControlArea, WindowInsets, WindowParams, WindowVisibility,
+    A11yCallbacks, AnyWindowHandle, Bounds, DevicePixels, DispatchEventResult, GpuSpecs,
+    HeadlessAtlas, Pixels, PlatformAtlas, PlatformDisplay, PlatformHeadlessRenderer, PlatformInput,
+    PlatformInputHandler, PlatformWindow, Point, PromptButton, RequestFrameOptions, Scene, Size,
+    TestPlatform, TextInputConfiguration, TextInputStateChange, WindowAppearance,
+    WindowBackgroundAppearance, WindowBounds, WindowControlArea, WindowInsets, WindowParams,
+    WindowVisibility,
 };
 use gpui_util::ResultExt as _;
 #[cfg(any(test, feature = "test-support"))]
@@ -56,6 +57,8 @@ pub(crate) struct TestWindowState {
     appearance: WindowAppearance,
     external_drag_files: Vec<(PathBuf, bool)>,
     start_external_drag_result: bool,
+    a11y_callbacks: Option<Rc<A11yCallbacks>>,
+    a11y_tree_update: Option<accesskit::TreeUpdate>,
 }
 
 #[derive(Clone)]
@@ -130,6 +133,8 @@ impl TestWindow {
             appearance: WindowAppearance::Light,
             external_drag_files: Vec::new(),
             start_external_drag_result: false,
+            a11y_callbacks: None,
+            a11y_tree_update: None,
         })))
     }
     pub fn simulate_scheduled_frame(&self) -> bool {
@@ -287,9 +292,53 @@ impl TestWindow {
     pub fn set_start_external_drag_result(&self, result: bool) {
         self.0.lock().start_external_drag_result = result;
     }
+
+    /// Activates accessibility through the platform callback.
+    /// Run the test executor afterward to obtain the rendered tree.
+    ///
+    /// # Panics
+    /// Panics if accessibility was disabled in the window options.
+    pub fn activate_accessibility(&self) {
+        let callbacks = self
+            .0
+            .lock()
+            .a11y_callbacks
+            .clone()
+            .expect("window accessibility must be enabled");
+        let update = (callbacks.activation)();
+        self.0.lock().a11y_tree_update = update;
+    }
+
+    /// Returns the latest accessibility tree update sent to this window.
+    pub fn accessibility_tree_update(&self) -> Option<accesskit::TreeUpdate> {
+        self.0.lock().a11y_tree_update.clone()
+    }
+
+    /// Sends an accessibility action through the platform callback.
+    /// Run the test executor afterward to dispatch the action.
+    ///
+    /// # Panics
+    /// Panics if accessibility was disabled in the window options.
+    pub fn simulate_accessibility_action(&self, request: accesskit::ActionRequest) {
+        let callbacks = self
+            .0
+            .lock()
+            .a11y_callbacks
+            .clone()
+            .expect("window accessibility must be enabled");
+        (callbacks.action)(request);
+    }
 }
 
 impl PlatformWindow for TestWindow {
+    fn a11y_init(&self, callbacks: A11yCallbacks) {
+        self.0.lock().a11y_callbacks = Some(Rc::new(callbacks));
+    }
+
+    fn a11y_tree_update(&self, tree_update: accesskit::TreeUpdate) {
+        self.0.lock().a11y_tree_update = Some(tree_update);
+    }
+
     fn visual_viewport_bounds(&self) -> Bounds<Pixels> {
         let state = self.0.lock();
         state
