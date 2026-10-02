@@ -7,25 +7,22 @@ Apple-inspired components, materials, and motion for GPUI.
 | `cupertino` | Framework-independent design values and motion primitives. |
 | `gpui-cupertino` | GPUI components, rendering, and interaction; depends on `cupertino`. |
 
-The implementation provides window-local glass on macOS Metal: inactive Clear,
+The implementation provides a light/dark theme, buttons, single-line text input,
+and nonmodal popovers. Window-local glass on macOS Metal includes inactive Clear,
 configurable Gaussian materials, continuous outlines, and accessibility fallbacks.
-Motion delegates to GPUI springs. Publishing remains disabled while the API and
-license are being defined.
+Motion delegates to GPUI springs. The full component library remains in development;
+publishing is disabled while the API and license are being defined.
 
-See [repository layout](docs/architecture.md) for directory responsibilities and
-dependency boundaries, and [material rendering](docs/materials.md) for the rendering
-contract and current limits.
+See [component contracts](docs/components.md), [material rendering](docs/materials.md),
+and the [repository goal and milestones](docs/roadmap.md). The
+[repository layout](docs/architecture.md) defines dependency boundaries.
 
 ```rust
-use cupertino::materials::{ClearGlassMaterial, GlassShape};
-use gpui::{div, prelude::*, px};
-use gpui_cupertino::materials::Glass;
+use gpui_cupertino::components::Button;
 
-let material = ClearGlassMaterial::new(
-    GlassShape::RoundedRectangle { corner_radius: 20.0 },
-    10.0,
-)?;
-let panel = Glass::clear(material, div().w(px(240.0)).h(px(128.0)).child("Library"));
+let save = Button::new("save", "Save")
+    .primary()
+    .on_click(|_, _, _| println!("Save"));
 ```
 
 Clear requires an Apple GPU. Its host blur radius is distinct from Gaussian
@@ -47,6 +44,7 @@ because building GPUI's shaders requires the Metal compiler.
 ```sh
 devenv shell
 cargo build --workspace --locked
+cargo run -p gpui-cupertino --example components --locked
 cargo run -p gpui-cupertino --example glass --locked
 check
 ```
@@ -58,7 +56,10 @@ for the workspace. Run the same checks without entering a shell with:
 devenv test
 ```
 
-The checks include actual Metal readback tests. The example has a scrollable
+The checks include interaction, accessibility, and actual Metal readback tests.
+The component example combines a settings form with an editable popover. Call
+`gpui_cupertino::init(cx)` at startup to enable its text editing keys. The glass
+example has a scrollable
 coordinate grid, reversible spring motion, neighboring glass, and accessibility
 overrides. GPUI is pinned and patched in [vendor/](vendor/README.md); use that
 copy when integrating this workspace.

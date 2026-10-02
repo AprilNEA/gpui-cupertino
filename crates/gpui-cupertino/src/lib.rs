@@ -9,6 +9,13 @@ pub use cupertino;
 pub mod components;
 pub mod theme;
 
+/// Register default single-line editing keys before creating application windows.
+///
+/// Call once during startup. The application owns Tab navigation and global actions.
+pub fn init(cx: &mut gpui::App) {
+    components::init(cx);
+}
+
 /// GPUI spring animation builders using Cupertino's validated design parameters.
 pub mod motion;
 
