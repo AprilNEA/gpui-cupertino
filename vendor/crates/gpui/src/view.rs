@@ -300,6 +300,7 @@ struct ViewElementState {
 }
 
 struct ViewElementCacheKey {
+    inert: bool,
     bounds: Bounds<Pixels>,
     content_mask: ContentMask<Pixels>,
     text_style: TextStyle,
@@ -487,6 +488,7 @@ fn prepaint_view(
                     && element_state.cache_key.text_style == text_style
                     && !window.dirty_views.contains(&entity_id)
                     && !window.refreshing
+                    && element_state.cache_key.inert == window.inert
                 {
                     let prepaint_start = window.prepaint_index();
                     window.reuse_prepaint(element_state.prepaint_range.clone());
@@ -517,6 +519,7 @@ fn prepaint_view(
                         prepaint_range: prepaint_start..prepaint_end,
                         paint_range: PaintIndex::default()..PaintIndex::default(),
                         cache_key: ViewElementCacheKey {
+                            inert: window.inert,
                             bounds,
                             content_mask,
                             text_style,

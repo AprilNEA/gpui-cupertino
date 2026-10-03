@@ -365,7 +365,7 @@ impl<E: Element> Drawable<E> {
 
                 let bounds = window.layout_bounds(layout_id);
                 let mut pushed_a11y_node = false;
-                if window.a11y.is_active() {
+                if window.a11y.is_active() && !window.inert {
                     if let Some(global_id) = global_id.as_ref() {
                         if let Some(role) = self.element.a11y_role() {
                             let node_id = global_id.accesskit_node_id();
