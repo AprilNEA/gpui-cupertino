@@ -9,7 +9,7 @@ GPUI 自维护规范和补丁台账已迁移到独立仓库 [AprilNEA/gpui-alloy
 - 上游基线 `U`：`4c841aaf1c4fa613e89a5d77096523d0ff593b56`，见 [vendor 来源说明](../vendor/README.md)。
 - 当前仍使用本仓库的 `vendor/`，依赖来源没有切换到 Alloy。
 - 9 项 vendor 补丁尚未迁入 Alloy。已有 2 个上游 PR 也尚未进入当前 vendor。
-- Alloy 已验证快照 `D`、可消费 tag、可重复的导出转换和导入提交 `V`：待建立。
+- Alloy 已验证快照 `D`、可消费 tag 和导入提交 `V`：待建立。候选导出和来源检查工具已完成，使用方法与验收边界见 Alloy 的 `ALLOY.md`；当前 vendor 尚未由 Alloy 快照重建。
 - 原规范建立时的 `devenv test` 通过，只代表当时含未提交修改的 Cupertino 工作区；不代表 Alloy 或上游 PR 已通过验收。
 
 ## 后续导入记录
