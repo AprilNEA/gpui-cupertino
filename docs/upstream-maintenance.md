@@ -1,8 +1,8 @@
 # GPUI Alloy 维护入口
 
-GPUI 自维护规范和补丁台账已迁移到独立仓库 [AprilNEA/gpui-alloy](https://github.com/AprilNEA/gpui-alloy)，唯一维护文件为 `downstream/gpui` 分支的 `ALLOY.md`。本仓库保留 Cupertino 组件、vendor 导入记录和消费方验收证据，不再复制补丁状态。
+GPUI 自维护规范和补丁台账已迁移到独立仓库 [AprilNEA/gpui-alloy](https://github.com/AprilNEA/gpui-alloy)，唯一维护文件为 `main` 分支的 `ALLOY.md`。本仓库保留 Cupertino 组件、vendor 导入记录和消费方验收证据，不再复制补丁状态。
 
-初始化文档目前已在同级本地仓库 `../gpui-alloy/ALLOY.md` 建立，尚待首次推送；推送后可查看 [在线维护规范](https://github.com/AprilNEA/gpui-alloy/blob/downstream/gpui/ALLOY.md)。已有上游 PR 继续保留在 [AprilNEA/zed](https://github.com/AprilNEA/zed)。
+初始化文档目前已在同级本地仓库 `../gpui-alloy/ALLOY.md` 建立，尚待首次推送；推送后可查看 [在线维护规范](https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md)。已有上游 PR 继续保留在 [AprilNEA/zed](https://github.com/AprilNEA/zed)。
 
 ## 当前消费状态
 
