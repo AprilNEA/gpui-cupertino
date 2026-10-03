@@ -1,3 +1,5 @@
+> Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 # Welcome to GPUI!
 
 GPUI is a hybrid immediate and retained mode, GPU accelerated, UI framework
@@ -42,6 +44,14 @@ The features on `gpui_platform` are platform-specific, so the list above is a sa
 
 - **Windows** — no features are required. Windowing uses Win32 and text uses DirectWrite. `font-kit` has no effect here.
 
+### Native anchored popups
+
+On macOS, `WindowKind::AnchoredPopup` creates a native child popup positioned from its parent's content coordinates. Grabbing popups accept keyboard focus and dismiss on unhandled Escape or application deactivation. Passive popups preserve parent focus. Closing the parent closes its popups.
+
+A popup created with `show: false` ignores application deactivation and outside clicks until explicitly activated. Closing the parent still closes a hidden popup.
+
+Run `cargo run -p gpui --example popup` to exercise placement, resizing, nested menus, and keyboard activation.
+
 ### Additional Topics
 
 - [Ownership and data flow](_ownership_and_data_flow)
@@ -52,6 +62,8 @@ The features on `gpui_platform` are platform-specific, so the list above is a sa
 GPUI has various system dependencies that it needs in order to work.
 
 #### macOS
+
+For `WindowKind::PopUp`, `titlebar: None` removes the native border and shadow. Use `Some(TitlebarOptions)` to retain native decoration. Normal windows keep their existing decoration behavior.
 
 On macOS, GPUI uses Metal for rendering. In order to use Metal, you need to do the following:
 
@@ -96,3 +108,19 @@ In addition to the systems above, GPUI provides a range of smaller services that
 - The `[gpui::test]` macro provides a convenient way to write tests for your GPUI applications. Tests also have their own kind of context, a `TestAppContext` which provides ways of simulating common platform input. See `app::test_context` and `test` modules for more details.
 
 Currently, the best way to learn about these APIs is to read the Zed source code or drop a question in the [Zed Discord](https://zed.dev/community-links). We're working on improving the documentation, creating more examples, and will be publishing more guides to GPUI on our [blog](https://zed.dev/blog).
+
+## Native macOS backdrops
+
+`Window::paint_backdrop` samples the opaque SDR window content painted before the material, including across open paint layers and cached paint replay. The native Metal renderer supports this path; transparent windows, desktop sampling, and HDR/EDR are not supported.
+
+`Window::paint_continuous_quad` shares the material outline and edge coverage while retaining fractional device-pixel bounds. Continuous quads require equal corner radii and an optional uniform solid border.
+
+`Window::paint_clear_backdrop` applies the inactive Clear recipe for the current window appearance, regardless of focus. The path requires an Apple GPU, Metal 3.1, an opaque SDR target, and RGB color profiles that support public ColorSync parametric conversion. The filter radius controls encoded-RGB mip filtering, not Gaussian sigma.
+
+## Inert subtrees
+
+Wrap content behind a modal boundary with `gpui::inert(content, true)`. The subtree retains its layout and painting while excluding input handlers, focus targets, platform text input, and accessibility nodes. Deferred children remain inert, and cached views rebuild registrations when the boundary changes. Application-global actions and persistent subscriptions remain the application’s responsibility.
+
+## Revealing focused descendants
+
+Use `div().autoscroll_on_focus()` with a tracked `ScrollHandle` to reveal newly focused descendants. Nested scroll containers settle from the inner viewport outward on the next frame. Wheel scrolling remains free until focus changes. Inert descendants and deferred overlays do not scroll the background.

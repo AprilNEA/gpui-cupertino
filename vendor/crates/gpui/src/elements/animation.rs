@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 use scheduler::Instant;
 use std::{cell::Cell, rc::Rc, time::Duration};
 
@@ -711,6 +713,27 @@ mod tests {
                 |element, value| element.left(value),
             )
             .child(div());
+    }
+
+    #[gpui::test]
+    fn test_spring_animation_uses_scheduler_clock(cx: &mut TestAppContext) {
+        let rendered_values = Rc::new(RefCell::new(Vec::new()));
+        let window = cx.open_window(size(px(100.0), px(100.0)), {
+            let rendered_values = rendered_values.clone();
+            move |_, _| SpringAnimationTestView {
+                target: px(100.0),
+                initial: Some(px(0.0)),
+                playback: SpringPlayback::Running,
+                rendered_values,
+            }
+        });
+        cx.run_until_parked();
+        assert_eq!(*rendered_values.borrow(), vec![px(0.0)]);
+
+        cx.executor().advance_clock(Duration::from_secs(100));
+        assert!(simulate_next_frame(&window, cx) > 0);
+        assert_eq!(*rendered_values.borrow().last().unwrap(), px(100.0));
+        assert_eq!(simulate_next_frame(&window, cx), 0);
     }
 
     #[gpui::test]

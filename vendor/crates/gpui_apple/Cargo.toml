@@ -1,3 +1,5 @@
+# Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 [package]
 name = "gpui_apple"
 version = "0.1.0"
@@ -43,3 +45,27 @@ cbindgen.workspace = true
 
 [target.'cfg(target_os = "macos")'.dev-dependencies]
 gpui = { workspace = true, features = ["test-support"] }
+
+[[test]]
+name = "backdrop"
+required-features = ["test-support"]
+
+[[test]]
+name = "numeric_reference"
+required-features = ["test-support"]
+
+[[test]]
+name = "optical_reference"
+required-features = ["test-support"]
+
+[[test]]
+name = "continuous_corners"
+required-features = ["test-support"]
+
+[[test]]
+name = "clear"
+required-features = ["test-support"]
+
+[[test]]
+name = "color_management"
+required-features = ["test-support"]

@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 // todo("windows"): remove
 #![cfg_attr(windows, allow(dead_code))]
 

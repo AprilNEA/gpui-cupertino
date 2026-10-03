@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 use super::*;
 use metal::{MTLCommandBufferStatus, MTLOrigin, MTLRegion};
 use std::ffi::c_void;

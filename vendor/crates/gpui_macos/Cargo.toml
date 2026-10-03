@@ -1,3 +1,5 @@
+# Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 [package]
 name = "gpui_macos"
 version = "0.1.0"
@@ -11,6 +13,18 @@ workspace = true
 [lib]
 path = "src/gpui_macos.rs"
 doctest = false
+
+[[test]]
+name = "native_popup"
+harness = false
+# Run explicitly with --test native_popup: AppKit requires a graphical session.
+test = false
+required-features = ["test-support"]
+
+[[test]]
+name = "popup_decorations"
+harness = false
+test = false
 
 [features]
 default = ["gpui/default"]
@@ -50,10 +64,10 @@ log.workspace = true
 mach2.workspace = true
 objc.workspace = true
 objc2.workspace = true
-objc2-app-kit.workspace = true
+objc2-app-kit = { workspace = true, features = ["NSEvent"] }
 objc2-core-graphics.workspace = true
 objc2-core-media.workspace = true
-objc2-foundation.workspace = true
+objc2-foundation = { workspace = true, features = ["NSOperation", "block2"] }
 objc2-screen-capture-kit.workspace = true
 objc2-user-notifications.workspace = true
 parking_lot.workspace = true
@@ -70,3 +84,4 @@ uuid.workspace = true
 [target.'cfg(target_os = "macos")'.dev-dependencies]
 gpui = { workspace = true, features = ["test-support"] }
 gpui_apple = { workspace = true, features = ["test-support"] }
+objc2-app-kit = { workspace = true, features = ["NSGraphicsContext"] }
