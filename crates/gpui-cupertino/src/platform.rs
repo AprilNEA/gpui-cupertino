@@ -62,9 +62,9 @@ pub(crate) fn set_test_preferences(cx: &mut App, preferences: AccessibilityPrefe
 
 /// Read system settings and subscribe to changes for the lifetime of the GPUI app.
 ///
-/// Call once during startup when using springs without a [`crate::materials::Glass`].
-/// Glass also initializes this automatically. Changes refresh all windows and
-/// update [`App::reduce_motion`]; no polling or continuous animation is required.
+/// [`crate::init`] and [`crate::materials::Glass`] initialize this automatically.
+/// Changes refresh all windows and update [`App::reduce_motion`]; no polling
+/// or continuous animation is required.
 pub fn accessibility_preferences(cx: &mut App) -> AccessibilityPreferences {
     if let Some(state) = cx.try_global::<AccessibilityState>() {
         return state.preferences;
@@ -113,4 +113,21 @@ pub fn accessibility_preferences(cx: &mut App) -> AccessibilityPreferences {
         _task: task,
     });
     preferences
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui::TestAppContext;
+
+    use super::AccessibilityPreferences;
+
+    #[gpui::test]
+    fn initialization_synchronizes_system_motion_without_glass(cx: &mut TestAppContext) {
+        let expected = AccessibilityPreferences::read().reduce_motion;
+        cx.update(|cx| {
+            cx.set_reduce_motion(!expected);
+            crate::init(cx);
+            assert_eq!(cx.reduce_motion(), expected);
+        });
+    }
 }

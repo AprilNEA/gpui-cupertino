@@ -65,7 +65,8 @@ The checks include interaction, accessibility, and actual Metal readback tests.
 The examples cover a settings form, searchable multiple-selection collections,
 detail editing with nested modal panels, and workspace navigation with resizable
 panes, retained tabs, empty states, and loading progress. Call
-`gpui_cupertino::init(cx)` at startup to enable component key bindings. The glass
+`gpui_cupertino::init(cx)` at startup to enable component key bindings and macOS
+accessibility preference updates. The glass
 example has a scrollable
 coordinate grid, reversible spring motion, neighboring glass, and accessibility
 overrides. GPUI is pinned and patched in [vendor/](vendor/README.md); use that

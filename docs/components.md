@@ -1,6 +1,6 @@
 # Component contracts
 
-Call `gpui_cupertino::init(cx)` once during application startup to register component key bindings. Bind Tab and Shift-Tab to `Window::focus_next` and `Window::focus_prev` in the root view's key context. Scoped component bindings then take precedence over ancestor navigation. GPUI treats context-free bindings registered after initialization as explicit user overrides. See the [settings example](../crates/gpui-cupertino/examples/components.rs) for a complete composition.
+Call `gpui_cupertino::init(cx)` once during application startup to register component key bindings. On macOS, initialization also synchronizes Reduce Motion and subscribes to system accessibility changes, including applications without Glass. Set an application motion override after initialization; later system notifications synchronize the system value again. Bind Tab and Shift-Tab to `Window::focus_next` and `Window::focus_prev` in the root view's key context. Scoped component bindings then take precedence over ancestor navigation. GPUI treats context-free bindings registered after initialization as explicit user overrides. See the [settings example](../crates/gpui-cupertino/examples/components.rs) for a complete composition.
 
 `Theme::for_window(window)` resolves semantic colors from the current light or dark window appearance. Theme colors are library defaults. They do not read the system accent color. The palette checks require text contrast of at least 4.5:1 and control boundary contrast of at least 3:1 on the supported opaque surfaces.
 

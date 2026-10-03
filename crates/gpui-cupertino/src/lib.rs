@@ -9,12 +9,15 @@ pub use cupertino;
 pub mod components;
 pub mod theme;
 
-/// Register component key bindings before creating application windows.
+/// Initialize component bindings and system preferences before creating windows.
 ///
 /// Call once during startup. Bind ordinary Tab navigation in an ancestor key context.
 /// The application owns global actions; modal panels constrain their own Tab traversal.
+/// On macOS, initialization synchronizes reduced motion and observes accessibility changes.
 pub fn init(cx: &mut gpui::App) {
     components::init(cx);
+    #[cfg(target_os = "macos")]
+    platform::accessibility_preferences(cx);
 }
 
 /// GPUI spring animation builders using Cupertino's validated design parameters.

@@ -485,6 +485,7 @@ fn frame(window: WindowHandle<Probe>, cx: &mut TestAppContext) -> usize {
 #[gpui::test]
 fn progress_exposes_busy_value_and_stops_hidden_or_reduced_motion_frames(cx: &mut TestAppContext) {
     let window = open(cx);
+    cx.update(|cx| cx.set_reduce_motion(false));
     let (_, progress) = node(window, "Download", cx);
     assert_eq!(progress.role(), Role::ProgressIndicator);
     assert_eq!(progress.numeric_value(), Some(0.25));

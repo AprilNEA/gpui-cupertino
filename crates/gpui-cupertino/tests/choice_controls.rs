@@ -438,6 +438,7 @@ fn frame(window: WindowHandle<Probe>, cx: &mut TestAppContext) -> usize {
 #[gpui::test]
 fn toggle_animates_value_changes_and_obeys_reduced_motion_in_flight(cx: &mut TestAppContext) {
     let window = open(cx);
+    cx.update(|cx| cx.set_reduce_motion(false));
     assert_eq!(
         frame(window, cx),
         0,
