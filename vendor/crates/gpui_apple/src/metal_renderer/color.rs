@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 use anyhow::{Context as _, Result, anyhow, bail, ensure};
 use core_foundation::{
     array::{CFArray, CFArrayRef},

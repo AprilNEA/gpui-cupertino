@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 use anyhow::{Result, anyhow, ensure};
 use gpui::{ClearBackdrop, WindowAppearance};
 use metal::{MTLLanguageVersion, MTLPixelFormat, MTLSize, MTLTextureUsage};

@@ -1,31 +1,9 @@
-# GPUI source
+# GPUI Alloy source export
 
-This directory contains the GPUI dependency closure from
-`zed-industries/zed` at `4c841aaf1c4fa613e89a5d77096523d0ff593b56`.
-Upstream licenses are retained. The workspace manifest retains the inherited
-dependency versions and lint settings for these crates.
+Revision: `19fc9968f689ccce2b9e31c2eb9a76ec442333dc`.
 
-The local changes add ordered backdrop boundaries to GPUI and an independently
-written Metal material implementation to `gpui_apple`. Spring animation uses
-GPUI's scheduler clock, enabling deterministic retargeting and frame-cadence
-checks. A separate macOS continuous-quad batch shares glass geometry with opaque
-accessibility surfaces and preserves the ordinary quad buffer layout. Inactive
-Clear uses an encoded-RGB mip filter and public ColorSync parameters for live
-layer/display conversion. Test-only scene accessors and a ColorSync reference
-check support adapter acceptance.
+Upstream: `4c841aaf1c4fa613e89a5d77096523d0ff593b56`.
 
-`TestWindow` also retains accessibility callbacks and tree updates. Component tests use these callbacks to activate accessibility and dispatch actions through GPUI's platform path.
+This directory contains generated sources. Source verification does not establish build or native behavior. Keep the directory unchanged and retain `ALLOY-SNAPSHOT.json`. The consumer configuration and lockfile control external dependencies. Original Zed workspace controls are preserved under `alloy-source/` as reference files.
 
-GPUI clears pending keyboard activation when a control removes its primary click listeners. GPUI cancels a pending pointer press when no click, auxiliary click, or drag handler remains. This prevents a press from surviving a disabled interval and activating after the control is enabled again.
-
-`gpui::inert` keeps a subtree's layout and painting while excluding input handlers, focus targets, platform text input, and accessibility nodes. Modal panels use this boundary for background content. Deferred descendants preserve the boundary. Cached views rebuild registrations when the boundary changes. Application-global actions and persistent subscriptions remain outside the boundary.
-
-`Div::autoscroll_on_focus` lets ScrollArea reveal newly focused descendants through a tracked ScrollHandle. A private scoped target keeps nested offsets consistent without consuming List's existing autoscroll requests. Geometry settles on the next frame, and wheel scrolling remains free until focus changes again. Inert and deferred descendants do not scroll the background.
-
-Keystroke interception stops dispatch before raw capture handlers run. Tooltip dismissal uses this boundary when the pointer hovers a hint whose trigger does not own keyboard focus.
-
-Other source files are kept at the pinned revision apart from whitespace cleanup. This source workspace is excluded from Cupertino's workspace so its upstream examples and tests are not library release targets.
-
-The source is included because the background effect requires renderer and
-scene changes not exposed by the upstream public API. Do not substitute an
-unpatched GPUI release. No Apple private resources or shaders are included.
+See the [maintenance policy](https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md). Each crate retains its upstream license.

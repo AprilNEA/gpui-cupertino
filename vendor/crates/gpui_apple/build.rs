@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 #![allow(clippy::disallowed_methods, reason = "build scripts are exempt")]
 
 fn main() {

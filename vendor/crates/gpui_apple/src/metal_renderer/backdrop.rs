@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 use anyhow::{Result, anyhow};
 use gpui::{Backdrop, DevicePixels, Size};
 use metal::{MTLPixelFormat, MTLResourceOptions, MTLSize, MTLTextureType, MTLTextureUsage};

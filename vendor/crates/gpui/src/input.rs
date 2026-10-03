@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 use crate::{
     App, Bounds, ClipboardItem, Context, Entity, InputHandler, Pixels, TextInputConfiguration,
     UTF16Selection, Window,
@@ -289,7 +291,7 @@ mod tests {
     use crate::{
         AnyWindowHandle, AppContext as _, FocusHandle, InteractiveElement as _, IntoElement,
         ParentElement as _, Render, Styled as _, TestAppContext, TextInputAction,
-        TextInputStateChange, canvas, div,
+        TextInputStateChange, canvas, div, inert,
     };
 
     #[gpui::test]
@@ -304,6 +306,7 @@ mod tests {
             move |_, cx| ConfigurationTestView {
                 focus_handle: cx.focus_handle(),
                 configuration: custom,
+                inert: false,
             }
         });
         let view = window.root(cx).unwrap();
@@ -381,7 +384,40 @@ mod tests {
         );
     }
 
+    #[gpui::test]
+    fn inert_unregisters_and_restores_platform_text_input(cx: &mut TestAppContext) {
+        let window = cx.add_window(|window, cx| {
+            let focus_handle = cx.focus_handle();
+            focus_handle.focus(window, cx);
+            ConfigurationTestView {
+                focus_handle,
+                configuration: TextInputConfiguration::default(),
+                inert: false,
+            }
+        });
+        let view = window.root(cx).unwrap();
+        let test_window = cx.test_window(window.into());
+        let handle = AnyWindowHandle::from(window);
+        for inert in [false, true, false] {
+            view.update(cx, |view, cx| {
+                view.inert = inert;
+                cx.notify();
+            });
+            cx.update_window(handle, |_, window, cx| window.draw(cx).clear(cx))
+                .unwrap();
+        }
+        assert_eq!(
+            test_window.text_input_state_changes(),
+            vec![
+                TextInputStateChange::FocusGained,
+                TextInputStateChange::FocusLost,
+                TextInputStateChange::FocusGained,
+            ]
+        );
+    }
+
     struct ConfigurationTestView {
+        inert: bool,
         focus_handle: FocusHandle,
         configuration: TextInputConfiguration,
     }
@@ -390,18 +426,21 @@ mod tests {
         fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             let view = cx.entity();
             let focus_handle = self.focus_handle.clone();
-            div().size_full().track_focus(&self.focus_handle).child(
-                canvas(
-                    |_, _, _| {},
-                    move |bounds, _, window, cx| {
-                        window.handle_input(
-                            &focus_handle,
-                            ElementInputHandler::new(bounds, view),
-                            cx,
-                        );
-                    },
-                )
-                .size_full(),
+            inert(
+                div().size_full().track_focus(&self.focus_handle).child(
+                    canvas(
+                        |_, _, _| {},
+                        move |bounds, _, window, cx| {
+                            window.handle_input(
+                                &focus_handle,
+                                ElementInputHandler::new(bounds, view),
+                                cx,
+                            );
+                        },
+                    )
+                    .size_full(),
+                ),
+                self.inert,
             )
         }
     }

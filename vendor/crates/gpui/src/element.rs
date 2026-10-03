@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 //! Elements are the workhorses of GPUI. They are responsible for laying out and painting all of
 //! the contents of a window. Elements form a tree and are laid out according to the web layout
 //! standards as implemented by [taffy](https://github.com/DioxusLabs/taffy). Most of the time,

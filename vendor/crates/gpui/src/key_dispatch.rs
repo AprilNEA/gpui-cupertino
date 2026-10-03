@@ -1,3 +1,5 @@
+// Modified by AprilNEA for GPUI Alloy. Patch records: https://github.com/AprilNEA/gpui-alloy/blob/main/ALLOY.md
+
 //! KeyDispatch is where GPUI deals with binding actions to key events.
 //!
 //! The key pieces to making a key binding work are to define an action,
@@ -1578,6 +1580,53 @@ mod tests {
             }]
         );
         assert_eq!(action_count.get(), 1);
+    }
+
+    #[crate::test]
+    fn test_interceptor_stops_raw_capture_and_bubble_handlers(cx: &mut TestAppContext) {
+        use crate::{InteractiveElement as _, Styled as _};
+
+        struct RawKeyView {
+            focus: FocusHandle,
+            captures: Rc<Cell<usize>>,
+            bubbles: Rc<Cell<usize>>,
+        }
+
+        impl Render for RawKeyView {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                let captures = self.captures.clone();
+                let bubbles = self.bubbles.clone();
+                crate::div()
+                    .track_focus(&self.focus)
+                    .size_full()
+                    .capture_key_down(move |_, _, _| captures.set(captures.get() + 1))
+                    .on_key_down(move |_, _, _| bubbles.set(bubbles.get() + 1))
+            }
+        }
+
+        let captures = Rc::new(Cell::new(0));
+        let bubbles = Rc::new(Cell::new(0));
+        let (view, cx) = cx.add_window_view(|_, cx| RawKeyView {
+            focus: cx.focus_handle(),
+            captures: captures.clone(),
+            bubbles: bubbles.clone(),
+        });
+        view.update_in(cx, |view, window, cx| window.focus(&view.focus, cx));
+        let consume = Rc::new(Cell::new(true));
+        let _subscription = cx.update(|_, cx| {
+            let consume = consume.clone();
+            cx.intercept_keystrokes(move |_, _, cx| {
+                if consume.get() {
+                    cx.stop_propagation();
+                }
+            })
+        });
+
+        cx.simulate_keystrokes("f1");
+        assert_eq!((captures.get(), bubbles.get()), (0, 0));
+        consume.set(false);
+        cx.simulate_keystrokes("f1");
+        assert_eq!((captures.get(), bubbles.get()), (1, 1));
     }
 
     #[crate::test]
