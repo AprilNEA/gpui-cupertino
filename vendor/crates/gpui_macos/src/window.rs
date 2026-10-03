@@ -556,7 +556,11 @@ unsafe fn build_window_class(name: &'static str, superclass: &Class) -> *const C
             toggle_tab_bar as extern "C" fn(&Object, Sel, id),
         );
 
-        decl.register()
+        let class = decl.register();
+        // SAFETY: Both callers register NSWindow subclasses, and AccessKit remains linked
+        // for the process lifetime. AppKit must resolve the content view's virtual focus.
+        accesskit_macos::add_focus_forwarder_to_window_class(name);
+        class
     }
 }
 

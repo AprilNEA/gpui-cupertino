@@ -6,6 +6,58 @@ GPUI 自维护规范和补丁台账位于 [AprilNEA/gpui-alloy](https://github.c
 
 ## 当前消费状态
 
+2026-10-04：GPUI-012 已通过本地来源与行为验收，补齐 macOS 原生窗口的辅助功能焦点转发。完整来源主题已集成到新的 D，独立 Alloy 已固定到已签名的 S，消费者已导入该 S。本记录提交时尚未创建新快照 tag，未 push；后续本地 tag 身份记录在 Alloy 台账。`gpui-alloy/20261003.2` 的发布记录保留在后文历史小节。
+
+- 上游基线 `U`：`4c841aaf1c4fa613e89a5d77096523d0ff593b56`，本轮不变。
+- GPUI-012 主题提交：`c13304e585f6442da5b22cf45198c16fa6aa2185`。
+- 完整源集成提交 `D`：`f7ecd66e516734656bf72e2b6f876ec6d977c633`。
+- 精简 Alloy 提交 `S`：`1a77576c8ef715f2ceaece8af18017cb360434c9`。
+- 本轮隔离 Alloy 工作区：`/private/tmp/cupertino-focus-standalone.QN4b9q`。
+- 消费导出记录：[vendor/ALLOY-SNAPSHOT.json](../vendor/ALLOY-SNAPSHOT.json)，格式为 2。`revision` 表示 S，`source.revision` 表示 D，`source.upstream` 表示 U。
+- 独立来源合同：[vendor/ALLOY-SOURCE.json](../vendor/ALLOY-SOURCE.json)。
+- 原格式 1 导出记录：[vendor/alloy-source/ALLOY-SNAPSHOT.json](../vendor/alloy-source/ALLOY-SNAPSHOT.json)，保留原始字节；SHA-256 为 `a8b922e9b2c5d0e6f2d61f0eb24f9a09f40df55bbd16105940751d4795eb4a23`。
+- 本次 exporter SHA-256：`9a82458aa24bedaaf9f592f57d2f956e612dfab1dc31265190e7624bebb69d45`。
+- 本次格式 2 导出记录 SHA-256：`cd26e4f2f16dc9ed9e01e8dbb195407aa6c75f7dcbf2a784f7772cb357f2401c`。
+- 消费方 `Cargo.lock` SHA-256：`6d2dca95f350211f11a8dee03614049cc2813f74929e8fe1d44c31bf4789d8a1`，本轮不变。
+- 导入提交 `V`：从包含本记录的导入提交取得，避免提交自引用。
+
+来源链为 U→D→S→V。只有 U→D 是 Git 祖先关系；D→S 是固定来源的提取关系，S→V 是消费导入关系。当前格式 2 快照包含 26 个 crate、439 个清单条目；保留的原格式 1 记录包含 437 个清单条目。导出保持完整 crate 目录、字体、许可证、符号链接和执行位。消费方继续使用自身的根配置和 lockfile，不自动启用 `vendor/alloy-source/` 内的原始根控制文件。
+
+本轮已完成的检查：
+
+- 固定 D→S 的[独立投影审计](../internal-docs/research/components-native-2026-10-03/focus-projection-fixed.json)通过。26 个 crate 及配套资源的 431 个生产投影条目逐项核对了路径、Git blob 字节、模式和符号链接目标；来源控制文件、provenance 及允许的独立根配置也通过精确比较。独立祖先历史检查确认 S 不包含 U 或 D。
+- 独立 Alloy 的 517 项测试及 3 项原生窗口 harness 通过。
+- 消费者 `verify-consumer` 通过，确认 18 个实际使用的配套包均来自固定 S。该检查使用 `aarch64-apple-darwin`、全部消费方 features 和 `--locked`；原始日志位于 `/private/tmp/cupertino-focus-consumer-source.log`。
+
+消费者 `devenv test` 和 `components` 示例构建均以退出码 0 完成。未插桩的真实示例通过 CUA 原生验收：编辑后系统报告 Display name 输入框焦点；Popover 打开时报告 Profile note 输入框焦点；Tab 移至 Done；Escape 与 Done 均关闭面板并恢复 Edit note… 按钮焦点；重开保留输入值。每个步骤的截图与 AX 状态一致。采样在操作前使用窗口公开的 AX Raise，不能将此前的遮挡等待解释为交互延迟。
+
+完整过程、失败基线、日志与截图保存在 [FOCUS.md](../internal-docs/research/components-native-2026-10-03/FOCUS.md)。本次验证的是窗口焦点转发及上述应用路径，未覆盖冷启动 host-focus 同步、中文 IME、VoiceOver 朗读或持续帧时间，也不扩大既有材质支持声明。
+
+## 当前快照的重现与回退
+
+使用本轮隔离 Alloy 工作区中的 exporter，从固定 S 导出到一个尚不存在的新目录。U 和 D 从 S 中的来源合同读取；不要使用另一份可变 Alloy checkout 替代该隔离路径。
+
+```sh
+ALLOY_REPO=/private/tmp/cupertino-focus-standalone.QN4b9q
+ALLOY_S=1a77576c8ef715f2ceaece8af18017cb360434c9
+ALLOY_CONSUMER=/Users/Xuan/Developer/AprilNEA/gpui-cupertino
+python3 "$ALLOY_REPO/script/gpui_snapshot.py" export --repo "$ALLOY_REPO" --revision "$ALLOY_S" --snapshot /tmp/gpui-alloy-gpui-012-20261004
+```
+
+核对新目录的完整差异并导入 `vendor/` 后，在 Cupertino 根目录执行来源与行为检查：
+
+```sh
+cd /Users/Xuan/Developer/AprilNEA/gpui-cupertino
+devenv shell -- python3 "$ALLOY_REPO/script/gpui_snapshot.py" verify-consumer --repo "$ALLOY_REPO" --revision "$ALLOY_S" --snapshot "$ALLOY_CONSUMER/vendor" --consumer "$ALLOY_CONSUMER" --target aarch64-apple-darwin
+devenv test
+```
+
+必须在 vendor 之外保存构建产物。本轮的直接回退点为 Cupertino 提交 `3e585e5062c2affb4e5ef27a001b59e4b3891ea3`。发生回归时，用新的提交恢复该提交中的整套 vendor 和对应维护记录；不要移动历史快照 tag 或撤销无关组件工作。本轮消费方 lockfile 不变。
+
+## gpui-alloy/20261003.2 历史发布记录
+
+以下内容完整保留 `.2` 发布时的消费状态和重现说明；其中的「本次」和「当前」均指该历史发布，不表示 GPUI-012 已完成相同验收。
+
 2026-10-03：本次消费来源改为精简 Alloy 的独立提交 S，快照 tag 为 `gpui-alloy/20261003.2`。原有 9 项补丁及已有 2 个上游 PR 的本地适配继续由完整源 D 提供。
 
 - 上游基线 `U`：`4c841aaf1c4fa613e89a5d77096523d0ff593b56`。
@@ -34,7 +86,7 @@ GPUI 自维护规范和补丁台账位于 [AprilNEA/gpui-alloy](https://github.c
 
 材质仍限原生 macOS Metal 的不透明 SDR 窗口；Inactive Clear 要求 Apple GPU、Metal 3.1 和可参数化的 RGB ColorSync 配置。HDR/EDR、混合 DPI、原生 VoiceOver/IME 及完整历史原生截图采样未验收，不能因仓库精简而扩大支持声明。
 
-## 重现与回退
+### 当时的重现与回退
 
 使用本记录对应的 exporter 版本，从固定 S 导出到一个尚不存在的新目录。新版 CLI 不接受旧的 `--upstream` 参数；U 和 D 从 S 中的来源合同读取。
 

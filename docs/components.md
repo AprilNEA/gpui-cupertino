@@ -43,3 +43,5 @@ See [virtual collections](collections.md) for retained lists and tables, stable 
 Run `devenv test` before committing. The workspace checks compile the showcase and verify input editing, platform IME calls, pointer and keyboard dispatch, focus restoration, panel placement, accessibility trees and actions, and the existing Metal material regressions.
 
 Run `cargo run -p gpui-cupertino --example components --locked` in `devenv shell` for native acceptance. Verify Chinese composition, candidate placement after horizontal scrolling, Tab traversal, Escape dismissal, light and dark appearance, and VoiceOver. Record native acceptance separately from simulated checks.
+
+On 2026-10-04, native checks confirmed macOS accessibility focus on edited text fields, Popover initial focus, Tab traversal, and trigger focus restoration after Escape or Done. The vendored GPUI forwards window accessibility focus queries to the content view. See [source and acceptance records](upstream-maintenance.md). These checks do not establish Chinese IME, VoiceOver speech, or native frame-time acceptance.

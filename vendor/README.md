@@ -1,8 +1,8 @@
 # GPUI Alloy source export
 
-Standalone revision: `9d59ea617d75d02e4645eefd22844235431138c8`.
+Standalone revision: `1a77576c8ef715f2ceaece8af18017cb360434c9`.
 
-Original integration: `d21987f81a013ec67945892506bcc6aae8a2db0f` from https://github.com/AprilNEA/zed.
+Original integration: `f7ecd66e516734656bf72e2b6f876ec6d977c633` from https://github.com/AprilNEA/zed.
 
 Upstream baseline: `4c841aaf1c4fa613e89a5d77096523d0ff593b56`.
 

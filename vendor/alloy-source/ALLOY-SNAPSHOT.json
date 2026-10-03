@@ -18,7 +18,7 @@
     },
     "README.md": {
       "executable": false,
-      "sha256": "15141d9e105687fbb788158dd2c8c4c339fd7bba67512c9179c644efa3b1f14d",
+      "sha256": "2d7d1635da32b48f6f1306773e0a921b774e57cce72561bda9d704c60cf125c8",
       "type": "file"
     },
     "alloy-source/.cargo/config.toml": {
@@ -1188,7 +1188,7 @@
     },
     "crates/gpui_macos/Cargo.toml": {
       "executable": false,
-      "sha256": "42e193e3815628b9cccf818cfe2b5d5c1b13fa4d1d401ddc3579afcd4f291707",
+      "sha256": "f5711ae493241e50fd0de284d6c030cbae0f0b0b738a53c791362fda501147da",
       "type": "file"
     },
     "crates/gpui_macos/LICENSE-APACHE": {
@@ -1258,7 +1258,7 @@
     },
     "crates/gpui_macos/src/window.rs": {
       "executable": false,
-      "sha256": "471b2a6b8f85a1484d7e958c6237ca267e3482097f7a39a49f54791a54756668",
+      "sha256": "a398ff2cad6d5cc2312d26899e2eae9cd0c3b86fab0291af01c4c91396ddc2b6",
       "type": "file"
     },
     "crates/gpui_macos/src/window/popup.rs": {
@@ -1269,6 +1269,11 @@
     "crates/gpui_macos/src/window_appearance.rs": {
       "executable": false,
       "sha256": "b8a1950175c0184469606447fca9450ab39a194fde04b80da3f0ad468ce2bd03",
+      "type": "file"
+    },
+    "crates/gpui_macos/tests/accessibility_focus.rs": {
+      "executable": false,
+      "sha256": "da99358125a76e2380892a38ce33005302af910432e034f94973fd9a6dae5a8c",
       "type": "file"
     },
     "crates/gpui_macos/tests/native_popup.rs": {
@@ -2218,7 +2223,7 @@
     "sources": "Keep complete crate directories, assets/fonts and root licenses unchanged.",
     "workspace": "Keep resolver, package, used dependencies and lints; replace members. Generate README.md."
   },
-  "revision": "d21987f81a013ec67945892506bcc6aae8a2db0f",
+  "revision": "f7ecd66e516734656bf72e2b6f876ec6d977c633",
   "roots": [
     "crates/gpui",
     "crates/gpui_platform"

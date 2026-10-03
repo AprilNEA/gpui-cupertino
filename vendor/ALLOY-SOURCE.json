@@ -3,6 +3,6 @@
   "kind": "standalone-source",
   "repository": "https://github.com/AprilNEA/zed",
   "upstream": "4c841aaf1c4fa613e89a5d77096523d0ff593b56",
-  "revision": "d21987f81a013ec67945892506bcc6aae8a2db0f",
-  "snapshot_sha256": "88a1781f7241d1f6a5f0f178a63230e0730085fce93c0f1049b66445a076615a"
+  "revision": "f7ecd66e516734656bf72e2b6f876ec6d977c633",
+  "snapshot_sha256": "a8b922e9b2c5d0e6f2d61f0eb24f9a09f40df55bbd16105940751d4795eb4a23"
 }
