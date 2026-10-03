@@ -1792,6 +1792,7 @@ pub fn div() -> Div {
         prepaint_listener: None,
         image_cache: None,
         prepaint_order_fn: None,
+        autoscroll_on_focus: false,
     }
 }
 
@@ -1802,9 +1803,18 @@ pub struct Div {
     prepaint_listener: Option<Box<dyn Fn(Vec<Bounds<Pixels>>, &mut Window, &mut App) + 'static>>,
     image_cache: Option<Box<dyn ImageCacheProvider>>,
     prepaint_order_fn: Option<Box<dyn Fn(&mut Window, &mut App) -> SmallVec<[usize; 8]>>>,
+    autoscroll_on_focus: bool,
 }
 
 impl Div {
+    /// Reveal a newly focused descendant with the minimum scroll displacement.
+    /// Requires a tracked [`ScrollHandle`]. Wheel scrolling remains free until focus changes.
+    /// Nested containers resolve from inner to outer; geometry updates on the next frame.
+    pub fn autoscroll_on_focus(mut self) -> Self {
+        self.autoscroll_on_focus = true;
+        self
+    }
+
     /// Add a listener to be called when the children of this `Div` are prepainted.
     /// This allows you to store the [`Bounds`] of the children for later use.
     pub fn on_children_prepainted(
@@ -2010,6 +2020,11 @@ impl Element for Div {
             scroll_handle.scroll_to_active_item();
         }
 
+        let focus_scroll = self
+            .autoscroll_on_focus
+            .then(|| self.interactivity.tracked_scroll_handle.clone())
+            .flatten();
+
         self.interactivity.prepaint(
             global_id,
             inspector_id,
@@ -2024,6 +2039,10 @@ impl Element for Div {
                 }
 
                 window.with_image_cache(image_cache, |window| {
+                    let previous_focus_reveal = focus_scroll.as_ref().map(|_| {
+                        window.focus_reveal_depth += 1;
+                        window.requested_focus_reveal.take()
+                    });
                     window.with_element_offset(scroll_offset, |window| {
                         if let Some(order_fn) = &self.prepaint_order_fn {
                             let order = order_fn(window, cx);
@@ -2038,6 +2057,23 @@ impl Element for Div {
                             }
                         }
                     });
+
+                    if let Some(scroll_handle) = focus_scroll.as_ref() {
+                        window.focus_reveal_depth -= 1;
+                        if let Some(target) = window.requested_focus_reveal.take() {
+                            let old_offset = scroll_handle.offset();
+                            let new_target = scroll_handle.reveal_bounds(target);
+                            let visible_target = new_target.intersect(&bounds);
+                            window.requested_focus_reveal =
+                                (!visible_target.is_empty()).then_some(visible_target);
+                            if scroll_handle.offset() != old_offset {
+                                // Child geometry was already prepainted; a second frame applies all nested offsets.
+                                window.on_next_frame(|window, _| window.refresh());
+                            }
+                        } else {
+                            window.requested_focus_reveal = previous_focus_reveal.flatten();
+                        }
+                    }
 
                     if let Some(listener) = self.prepaint_listener.as_ref() {
                         listener(children_bounds, window, cx);
@@ -2242,11 +2278,17 @@ impl Interactivity {
                     }
                 }
 
-                // Removing the click handler must cancel a key press before a later render restores the handler.
+                // A press cannot survive a frame without its click or drag handlers.
                 if self.click_listeners.is_empty()
                     && let Some(element_state) = element_state.as_mut()
                 {
                     element_state.pending_keyboard_down = None;
+                    if self.aux_click_listeners.is_empty()
+                        && self.drag_listener.is_none()
+                        && let Some(pending) = element_state.pending_mouse_down.as_ref()
+                    {
+                        pending.borrow_mut().take();
+                    }
                 }
 
                 // Ensure we store a focus handle in our element state if we're focusable.
@@ -2327,7 +2369,15 @@ impl Interactivity {
         if let Some(focus_handle) = self.tracked_focus_handle.as_ref() {
             window.set_focus_handle(focus_handle, cx);
 
-            if window.a11y.is_active() {
+            if !window.inert
+                && window.focus_reveal_depth > 0
+                && window.revealed_focus_generation != window.focus_generation
+                && focus_handle.is_focused(window)
+            {
+                window.requested_focus_reveal = Some(bounds);
+            }
+
+            if window.a11y.is_active() && !window.inert {
                 if let Some(global_id) = global_id {
                     let node_id = global_id.accesskit_node_id();
                     window.a11y.set_focusable(node_id, focus_handle.id);
@@ -2345,7 +2395,7 @@ impl Interactivity {
             }
         }
 
-        if self.report_active_descendant_focus && window.a11y.is_active() {
+        if self.report_active_descendant_focus && window.a11y.is_active() && !window.inert {
             if let Some(global_id) = global_id {
                 window
                     .a11y
@@ -2360,6 +2410,19 @@ impl Interactivity {
                 let style = self.compute_style_internal(None, element_state.as_mut(), window, cx);
 
                 if let Some(element_state) = element_state.as_mut() {
+                    if window.inert {
+                        // Input suppressed between down and up must not activate after re-enabling.
+                        if let Some(pending) = &element_state.pending_keyboard_down {
+                            pending.borrow_mut().take();
+                        }
+                        if let Some(pending) = &element_state.pending_mouse_down {
+                            pending.borrow_mut().take();
+                        }
+                        if let Some(clicked) = &element_state.clicked_state {
+                            *clicked.borrow_mut() = ElementClickedState::default();
+                        }
+                        element_state.active_tooltip.take();
+                    }
                     if let Some(clicked_state) = element_state.clicked_state.as_ref() {
                         let clicked_state = clicked_state.borrow();
                         self.active = Some(clicked_state.element);
@@ -2557,7 +2620,9 @@ impl Interactivity {
                                         // sibling groups every container would then sort ahead of
                                         // every item, and `focus_next` from a container would jump
                                         // to the first item in the whole window instead of its own.
-                                        if let Some(focus_handle) = &self.tracked_focus_handle {
+                                        if let Some(focus_handle) = &self.tracked_focus_handle
+                                            && !window.inert
+                                        {
                                             window.next_frame.tab_stops.insert(focus_handle);
                                         }
                                         if let Some(hitbox) = hitbox {
@@ -2598,7 +2663,7 @@ impl Interactivity {
 
                                         self.paint_keyboard_listeners(window, cx);
 
-                                        if window.a11y.is_active() {
+                                        if window.a11y.is_active() && !window.inert {
                                             if let Some(global_id) = global_id {
                                                 if !self.a11y_action_listeners.is_empty() {
                                                     let node_id = global_id.accesskit_node_id();
@@ -4256,6 +4321,49 @@ impl Default for ScrollHandle {
 }
 
 impl ScrollHandle {
+    fn reveal_bounds(&self, target: Bounds<Pixels>) -> Bounds<Pixels> {
+        fn displacement(start: Pixels, end: Pixels, minimum: Pixels, maximum: Pixels) -> Pixels {
+            if start >= minimum && end <= maximum || start <= minimum && end >= maximum {
+                Pixels::ZERO
+            } else if end - start > maximum - minimum {
+                if start < minimum {
+                    maximum - end
+                } else {
+                    minimum - start
+                }
+            } else if start < minimum {
+                minimum - start
+            } else {
+                maximum - end
+            }
+        }
+
+        let state = self.0.borrow();
+        let mut offset = state.offset.borrow_mut();
+        let previous = *offset;
+        if state.overflow.x == Overflow::Scroll {
+            offset.x = (offset.x
+                + displacement(
+                    target.left(),
+                    target.right(),
+                    state.bounds.left(),
+                    state.bounds.right(),
+                ))
+            .clamp(-state.max_offset.x, Pixels::ZERO);
+        }
+        if state.overflow.y == Overflow::Scroll {
+            offset.y = (offset.y
+                + displacement(
+                    target.top(),
+                    target.bottom(),
+                    state.bounds.top(),
+                    state.bounds.bottom(),
+                ))
+            .clamp(-state.max_offset.y, Pixels::ZERO);
+        }
+        Bounds::new(target.origin + (*offset - previous), target.size)
+    }
+
     /// Construct a new scroll handle.
     pub fn new() -> Self {
         Self(Rc::default())
