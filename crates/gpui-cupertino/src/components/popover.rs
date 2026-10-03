@@ -32,96 +32,11 @@
 //! }
 //! ```
 
+use super::panel_state::{PanelState, PopoverState};
 use gpui::{
-    AnyElement, App, Bounds, Context, Entity, FocusHandle, IntoElement, Pixels, RenderOnce, Role,
-    SharedString, Window, anchored, deferred, div, point, prelude::*, px,
+    AnyElement, App, Entity, IntoElement, RenderOnce, Role, SharedString, Window, anchored,
+    deferred, div, point, prelude::*, px,
 };
-
-/// The open state and focus handles for one [`Popover`].
-///
-/// Retain this state in an [`Entity`] and render exactly one popover for that entity.
-/// Give the trigger [`Self::trigger_focus_handle`] and its expanded state.
-pub struct PopoverState {
-    open: bool,
-    trigger_focus: FocusHandle,
-    panel_focus: FocusHandle,
-    initial_focus: Option<FocusHandle>,
-    trigger_bounds: Bounds<Pixels>,
-}
-
-impl PopoverState {
-    /// Create a closed popover with stable focus handles.
-    pub fn new(cx: &App) -> Self {
-        Self {
-            open: false,
-            trigger_focus: cx.focus_handle().tab_stop(true),
-            panel_focus: cx.focus_handle(),
-            initial_focus: None,
-            trigger_bounds: Bounds::default(),
-        }
-    }
-
-    /// Focus this content control when the popover opens.
-    ///
-    /// The control must be a descendant of the popover content. Without an explicit
-    /// target, the popover panel receives focus. Opening again does not reset focus.
-    #[must_use]
-    pub fn initial_focus(mut self, focus: &FocusHandle) -> Self {
-        self.initial_focus = Some(focus.clone());
-        self
-    }
-
-    /// Return the handle that the trigger control must track.
-    pub fn trigger_focus_handle(&self) -> &FocusHandle {
-        &self.trigger_focus
-    }
-
-    /// Return whether the popover is open.
-    pub fn is_open(&self) -> bool {
-        self.open
-    }
-
-    /// Open the popover and focus its configured target.
-    pub fn open(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.open {
-            return;
-        }
-        self.open = true;
-        self.initial_focus
-            .as_ref()
-            .unwrap_or(&self.panel_focus)
-            .focus(window, cx);
-        cx.notify();
-    }
-
-    /// Close the popover and restore trigger focus if the popover still owns focus.
-    ///
-    /// Focus that has moved to another control remains on that control.
-    pub fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if !self.open {
-            return;
-        }
-        self.open = false;
-        if self.panel_focus.contains_focused(window, cx)
-            || self
-                .initial_focus
-                .as_ref()
-                .is_some_and(|focus| focus.is_focused(window))
-        {
-            self.trigger_focus.focus(window, cx);
-        }
-        cx.notify();
-    }
-
-    /// Toggle the popover through the same focus transitions as open and close.
-    pub fn toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.open {
-            self.close(window, cx);
-        } else {
-            self.open(window, cx);
-        }
-    }
-}
 
 /// A nonmodal panel anchored below an existing trigger control.
 ///
@@ -137,13 +52,15 @@ impl PopoverState {
 /// its surface on macOS. Deferred painting preserves the trigger's layout and
 /// paints the panel after normal window content. Tab navigation remains with the
 /// host application; this nonmodal panel does not trap focus.
-/// Nested popovers are not supported.
+/// Nested panels share a window-local dismissal stack. One Escape or outside
+/// click closes only the top panel. Closing an ancestor closes its descendants.
 #[derive(IntoElement)]
 pub struct Popover {
     state: Entity<PopoverState>,
     trigger: AnyElement,
     label: SharedString,
     content: AnyElement,
+    role: Role,
 }
 
 impl Popover {
@@ -161,15 +78,30 @@ impl Popover {
             trigger: trigger.into_any_element(),
             label: label.into(),
             content: content.into_any_element(),
+            role: Role::Dialog,
         }
     }
 }
 
-impl RenderOnce for Popover {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+impl Popover {
+    pub(crate) fn role(mut self, role: Role) -> Self {
+        self.role = role;
+        self
+    }
+}
+
+impl Popover {
+    pub(super) fn render_root(
+        self,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> gpui::Stateful<gpui::Div> {
         let state = self.state.read(cx);
         let open = state.open;
         let panel_focus = state.panel_focus.clone();
+        let scroll = state.scroll.clone();
+        let (depth, top) =
+            PanelState::depth(self.state.entity_id(), window, cx).unwrap_or_default();
         let bounds_state = self.state.clone();
         let mut root = div()
             .on_children_prepainted(move |bounds, _, cx| {
@@ -181,11 +113,15 @@ impl RenderOnce for Popover {
 
         if open {
             let outside_state = self.state.clone();
+            let action_state = self.state.clone();
             let escape_state = self.state;
             let viewport = window.viewport_size();
             let panel = div()
+                .autoscroll_on_focus()
                 .id("panel")
-                .role(Role::Dialog)
+                .track_scroll(&scroll)
+                .role(self.role)
+                .key_context("CupertinoPanel")
                 .aria_label(self.label)
                 .track_focus(&panel_focus)
                 .max_w((viewport.width - px(16.)).max(px(0.)))
@@ -193,18 +129,23 @@ impl RenderOnce for Popover {
                 .overflow_scroll()
                 .occlude()
                 .on_mouse_down_out(move |event, window, cx| {
-                    // ponytail: outside dismissal covers one panel; nested popovers need shared bounds.
                     // The trigger handles its own toggle on mouse-up.
-                    if !outside_state
-                        .read(cx)
-                        .trigger_bounds
-                        .contains(&event.position)
+                    if top
+                        && !outside_state
+                            .read(cx)
+                            .trigger_bounds
+                            .contains(&event.position)
                     {
                         outside_state.update(cx, |state, cx| state.close(window, cx));
                     }
                 })
+                .on_action(move |_: &super::modal::Dismiss, window, cx| {
+                    if top {
+                        action_state.update(cx, |state, cx| state.close(window, cx));
+                    }
+                })
                 .on_key_down(move |event, window, cx| {
-                    if event.keystroke.key == "escape" {
+                    if top && event.keystroke.key == "escape" {
                         escape_state.update(cx, |state, cx| state.close(window, cx));
                         cx.stop_propagation();
                     }
@@ -222,12 +163,18 @@ impl RenderOnce for Popover {
                             .snap_to_window_with_margin(px(8.))
                             .child(panel),
                     )
-                    .with_priority(1),
+                    .with_priority(depth),
                 ),
             );
         }
 
         root
+    }
+}
+
+impl RenderOnce for Popover {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        self.render_root(window, cx)
     }
 }
 

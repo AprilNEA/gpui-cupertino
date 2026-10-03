@@ -1,16 +1,24 @@
 //! Exercise scroll boundaries, child input ownership, and form validation semantics.
 
 use gpui::{
-    AccessibleAction, Context, FocusHandle, IntoElement, KeyDownEvent, Render, Role, ScrollHandle,
-    TestAppContext, Window,
+    AccessibleAction, Context, FocusHandle, IntoElement, KeyBinding, KeyDownEvent, Render, Role,
+    ScrollHandle, TestAppContext, Window,
     accesskit::{ActionRequest, Live, TreeId},
-    div,
+    actions, div,
     prelude::*,
     px,
 };
 use gpui_cupertino::components::{
     Button, EmptyState, Form, FormField, FormSection, ScrollArea, ScrollAxes, Toolbar,
 };
+
+actions!(
+    layout_test,
+    [
+        /// Simulate the parent's page navigation command.
+        AncestorPageDown
+    ]
+);
 
 struct Probe {
     scroll: ScrollHandle,
@@ -19,11 +27,14 @@ struct Probe {
     axes: ScrollAxes,
     invalid: bool,
     child_keys: usize,
+    ancestor_keys: usize,
 }
 
 impl Render for Probe {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
+            .key_context("LayoutHost")
+            .on_action(cx.listener(|this, _: &AncestorPageDown, _, _| this.ancestor_keys += 1))
             .flex()
             .flex_col()
             .child(
@@ -68,6 +79,14 @@ impl Render for Probe {
 
 #[gpui::test]
 fn keyboard_and_accessibility_scroll_clamp_and_leave_child_keys_alone(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        gpui_cupertino::init(cx);
+        cx.bind_keys([KeyBinding::new(
+            "pagedown",
+            AncestorPageDown,
+            Some("LayoutHost"),
+        )]);
+    });
     let (view, cx) = cx.add_window_view(|window, cx| {
         window.activate_window();
         Probe {
@@ -77,6 +96,7 @@ fn keyboard_and_accessibility_scroll_clamp_and_leave_child_keys_alone(cx: &mut T
             axes: ScrollAxes::Both,
             invalid: false,
             child_keys: 0,
+            ancestor_keys: 0,
         }
     });
     let handle = cx.update(|window, _| window.window_handle());
@@ -112,6 +132,7 @@ fn keyboard_and_accessibility_scroll_clamp_and_leave_child_keys_alone(cx: &mut T
     cx.run_until_parked();
     cx.simulate_keystrokes("pagedown");
     assert_eq!(scroll.offset().y, px(-108.));
+    assert_eq!(view.read_with(cx, |view, _| view.ancestor_keys), 0);
     cx.simulate_keystrokes("end");
     assert_eq!(scroll.offset().y, px(-600.));
     cx.simulate_keystrokes("down");
@@ -129,6 +150,9 @@ fn keyboard_and_accessibility_scroll_clamp_and_leave_child_keys_alone(cx: &mut T
     cx.simulate_keystrokes("down");
     assert_eq!(scroll.offset().y, px(0.));
     assert_eq!(view.read_with(cx, |view, _| view.child_keys), 1);
+    cx.simulate_keystrokes("pagedown");
+    assert_eq!(view.read_with(cx, |view, _| view.ancestor_keys), 1);
+    assert_eq!(scroll.offset().y, px(0.));
 
     action(AccessibleAction::ScrollDown);
     cx.run_until_parked();
@@ -153,6 +177,7 @@ fn vertical_viewport_excludes_horizontal_actions_and_validation_alert_tracks_sta
         axes: ScrollAxes::Vertical,
         invalid: true,
         child_keys: 0,
+        ancestor_keys: 0,
     });
     let handle = cx.update(|window, _| window.window_handle());
     let platform = cx.test_window(handle);
@@ -213,6 +238,7 @@ fn changing_scroll_axes_resets_only_the_excluded_offset(cx: &mut TestAppContext)
         axes: ScrollAxes::Both,
         invalid: false,
         child_keys: 0,
+        ancestor_keys: 0,
     });
     cx.run_until_parked();
     let scroll = view.read_with(cx, |view, _| view.scroll.clone());

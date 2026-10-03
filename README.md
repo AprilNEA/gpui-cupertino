@@ -7,8 +7,9 @@ Apple-inspired components, materials, and motion for GPUI.
 | `cupertino` | Framework-independent design values and motion primitives. |
 | `gpui-cupertino` | GPUI components, rendering, and interaction; depends on `cupertino`. |
 
-The implementation provides a light/dark theme, buttons, single-line text input,
-nonmodal popovers, forms, toolbars, scroll areas, and empty states.
+The implementation provides a light/dark theme, form controls, single-line text
+input, tabs, sidebars, split views, virtual lists and tables, scrolling, menus,
+dialogs, sheets, and tooltips.
 Window-local glass on macOS Metal includes inactive Clear,
 configurable Gaussian materials, continuous outlines, and accessibility fallbacks.
 Motion delegates to GPUI springs. The full component library remains in development;
@@ -46,6 +47,8 @@ because building GPUI's shaders requires the Metal compiler.
 devenv shell
 cargo build --workspace --locked
 cargo run -p gpui-cupertino --example components --locked
+cargo run -p gpui-cupertino --example collections --locked
+cargo run -p gpui-cupertino --example detail --locked
 cargo run -p gpui-cupertino --example glass --locked
 check
 ```
@@ -58,8 +61,9 @@ devenv test
 ```
 
 The checks include interaction, accessibility, and actual Metal readback tests.
-The component example combines a settings form with an editable popover. Call
-`gpui_cupertino::init(cx)` at startup to enable its text editing keys. The glass
+The examples cover a settings form, searchable multiple-selection collections,
+and detail editing with nested modal panels. Call
+`gpui_cupertino::init(cx)` at startup to enable component key bindings. The glass
 example has a scrollable
 coordinate grid, reversible spring motion, neighboring glass, and accessibility
 overrides. GPUI is pinned and patched in [vendor/](vendor/README.md); use that

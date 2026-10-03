@@ -5,7 +5,11 @@ use gpui::{
     Window, WindowBounds, WindowOptions, actions, div, prelude::*, px, size,
 };
 use gpui_cupertino::{
-    components::{Button, Popover, PopoverState, TextInput, TextInputEvent},
+    components::{
+        Button, CheckState, Checkbox, ChoiceOption, Form, FormField, FormSection, Popover,
+        PopoverState, Progress, RadioGroup, ScrollArea, SegmentedControl, Slider, Stepper,
+        TextInput, TextInputEvent, Toggle, Toolbar, ValueRange,
+    },
     theme::Theme,
 };
 
@@ -21,12 +25,37 @@ actions!(
     ]
 );
 
+#[derive(Clone, PartialEq)]
+struct Preferences {
+    notifications: bool,
+    backups: bool,
+    sync: SharedString,
+    density: SharedString,
+    volume: f64,
+    copies: f64,
+}
+
+impl Default for Preferences {
+    fn default() -> Self {
+        Self {
+            notifications: true,
+            backups: false,
+            sync: "idle".into(),
+            density: "comfortable".into(),
+            volume: 50.0,
+            copies: 3.0,
+        }
+    }
+}
+
 struct Settings {
     name: Entity<TextInput>,
     note: Entity<TextInput>,
     popover: Entity<PopoverState>,
     saved_name: String,
     saved_note: String,
+    preferences: Preferences,
+    saved_preferences: Preferences,
     status: SharedString,
     _subscriptions: [Subscription; 2],
 }
@@ -65,6 +94,8 @@ impl Settings {
             popover,
             saved_name: "Cupertino".into(),
             saved_note: String::new(),
+            preferences: Preferences::default(),
+            saved_preferences: Preferences::default(),
             status: "Changes are kept in this window.".into(),
             _subscriptions: [name_subscription, note_subscription],
         }
@@ -73,8 +104,99 @@ impl Settings {
     fn save(&mut self, cx: &mut Context<Self>) {
         self.saved_name = self.name.read(cx).value().to_owned();
         self.saved_note = self.note.read(cx).value().to_owned();
+        self.saved_preferences = self.preferences.clone();
         self.status = format!("Saved for {}.", self.saved_name).into();
         cx.notify();
+    }
+
+    fn preference_controls(&self, cx: &Context<Self>) -> FormSection {
+        FormSection::new("behavior", "Workspace behavior")
+            .description("Save changes to keep these preferences in this window.")
+            .child(
+                Toggle::new(
+                    "notifications",
+                    "Notifications",
+                    self.preferences.notifications,
+                )
+                .on_change(cx.listener(|this, value: &bool, _, cx| {
+                    this.preferences.notifications = *value;
+                    cx.notify();
+                })),
+            )
+            .child(
+                Checkbox::new("backups", "Keep local backups", self.preferences.backups).on_change(
+                    cx.listener(|this, value: &CheckState, _, cx| {
+                        this.preferences.backups = *value == CheckState::Checked;
+                        cx.notify();
+                    }),
+                ),
+            )
+            .child(FormField::new(
+                "sync-field",
+                "Synchronization",
+                RadioGroup::new(
+                    "sync",
+                    "Synchronization",
+                    [
+                        ChoiceOption::new("manual", "Manually"),
+                        ChoiceOption::new("idle", "When idle"),
+                        ChoiceOption::new("always", "Continuously"),
+                    ],
+                )
+                .selected(self.preferences.sync.clone())
+                .on_change(cx.listener(|this, value: &SharedString, _, cx| {
+                    this.preferences.sync = value.clone();
+                    cx.notify();
+                })),
+            ))
+            .child(FormField::new(
+                "density-field",
+                "Content density",
+                SegmentedControl::new(
+                    "density",
+                    "Content density",
+                    [
+                        ChoiceOption::new("comfortable", "Comfortable"),
+                        ChoiceOption::new("compact", "Compact"),
+                    ],
+                )
+                .selected(self.preferences.density.clone())
+                .on_change(cx.listener(|this, value: &SharedString, _, cx| {
+                    this.preferences.density = value.clone();
+                    cx.notify();
+                })),
+            ))
+            .child(FormField::new(
+                "volume-field",
+                "Alert volume",
+                Slider::new(
+                    "volume",
+                    "Alert volume",
+                    ValueRange::new(0., 100., 5.).expect("constant volume range is valid"),
+                )
+                .value(self.preferences.volume)
+                .expect("slider changes preserve the finite range")
+                .on_change(cx.listener(|this, value: &f64, _, cx| {
+                    this.preferences.volume = *value;
+                    cx.notify();
+                })),
+            ))
+            .child(FormField::new(
+                "copies-field",
+                "Backup copies",
+                Stepper::new(
+                    "copies",
+                    "Backup copies",
+                    ValueRange::new(1., 10., 1.).expect("constant copy range is valid"),
+                )
+                .value(self.preferences.copies)
+                .expect("stepper changes preserve the finite range")
+                .disabled(!self.preferences.backups)
+                .on_change(cx.listener(|this, value: &f64, _, cx| {
+                    this.preferences.copies = *value;
+                    cx.notify();
+                })),
+            ))
     }
 }
 
@@ -82,7 +204,8 @@ impl Render for Settings {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = Theme::for_window(window);
         let dirty = self.name.read(cx).value() != self.saved_name
-            || self.note.read(cx).value() != self.saved_note;
+            || self.note.read(cx).value() != self.saved_note
+            || self.preferences != self.saved_preferences;
         let empty_name = self.name.read(cx).value().trim().is_empty();
         let popover = self.popover.read(cx);
         let trigger = Button::new("edit-note", "Edit note…")
@@ -112,8 +235,9 @@ impl Render for Settings {
                 })),
             );
         div()
+            .key_context("ComponentShowcase")
             .size_full()
-            .p(px(36.0))
+            .p(px(24.0))
             .flex()
             .flex_col()
             .gap(px(24.0))
@@ -124,36 +248,46 @@ impl Render for Settings {
             .on_action(|_: &PreviousField, window, cx| window.focus_prev(cx))
             .child(div().text_size(px(24.0)).child("Workspace preferences"))
             .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(10.0))
-                    .child("Display name")
-                    .child(self.name.clone()),
+                ScrollArea::new("settings-scroll", "Workspace preferences")
+                    .flex_1()
+                    .child(
+                        Form::new("settings", "Workspace preferences")
+                            .child(
+                                FormSection::new("profile", "Profile")
+                                    .child(
+                                        FormField::new(
+                                            "name-field",
+                                            "Display name",
+                                            self.name.clone(),
+                                        )
+                                        .description("Use a name that others can recognize.")
+                                        .when(empty_name, |field| {
+                                            field.error("Enter a display name.")
+                                        }),
+                                    )
+                                    .child(Popover::new(
+                                        &self.popover,
+                                        trigger,
+                                        "Edit profile note",
+                                        panel,
+                                    ))
+                                    .child(
+                                        Progress::new("profile-progress", "Profile completion")
+                                            .value(if empty_name {
+                                                0.0
+                                            } else if self.note.read(cx).value().is_empty() {
+                                                0.5
+                                            } else {
+                                                1.0
+                                            })
+                                            .expect("profile completion uses fixed fractions"),
+                                    ),
+                            )
+                            .child(self.preference_controls(cx)),
+                    ),
             )
             .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(16.0))
-                    .child(Popover::new(
-                        &self.popover,
-                        trigger,
-                        "Edit profile note",
-                        panel,
-                    ))
-                    .child(div().text_color(theme.secondary_foreground).child(
-                        if self.note.read(cx).value().is_empty() {
-                            "No profile note".to_owned()
-                        } else {
-                            self.note.read(cx).value().to_owned()
-                        },
-                    )),
-            )
-            .child(
-                div()
-                    .flex()
-                    .gap(px(10.0))
+                Toolbar::new("settings-actions", "Settings actions")
                     .child(
                         Button::new("save", "Save changes")
                             .primary()
@@ -168,6 +302,7 @@ impl Render for Settings {
                                     .update(cx, |input, cx| input.set_value(&this.saved_name, cx));
                                 this.note
                                     .update(cx, |input, cx| input.set_value(&this.saved_note, cx));
+                                this.preferences = this.saved_preferences.clone();
                                 this.status = "Changes reverted.".into();
                                 cx.notify();
                             })),
@@ -177,6 +312,15 @@ impl Render for Settings {
                 div()
                     .id("status")
                     .role(Role::Status)
+                    .aria_label(self.status.clone())
+                    .a11y_synthetic_children({
+                        let status = self.status.clone();
+                        move |builder| {
+                            let node = builder.parent_node();
+                            node.set_value(status.to_string());
+                            node.set_live(gpui::accesskit::Live::Polite);
+                        }
+                    })
                     .text_color(theme.secondary_foreground)
                     .child(self.status.clone()),
             )
@@ -187,8 +331,8 @@ fn main() {
     gpui_platform::application().run(|cx: &mut App| {
         gpui_cupertino::init(cx);
         cx.bind_keys([
-            KeyBinding::new("tab", NextField, None),
-            KeyBinding::new("shift-tab", PreviousField, None),
+            KeyBinding::new("tab", NextField, Some("ComponentShowcase")),
+            KeyBinding::new("shift-tab", PreviousField, Some("ComponentShowcase")),
             KeyBinding::new("cmd-q", Quit, None),
         ]);
         cx.on_action(|_: &Quit, cx| cx.quit());
@@ -198,7 +342,7 @@ fn main() {
             }
         })
         .detach();
-        let bounds = Bounds::centered(None, size(px(640.0), px(430.0)), cx);
+        let bounds = Bounds::centered(None, size(px(640.0), px(760.0)), cx);
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
@@ -238,7 +382,7 @@ mod tests {
                 .into_iter()
                 .find(|(_, node)| {
                     node.label() == Some(label)
-                        && matches!(node.role(), Role::Button | Role::TextInput)
+                        && matches!(node.role(), Role::Button | Role::TextInput | Role::Slider)
                 })
                 .unwrap()
         };
@@ -321,6 +465,41 @@ mod tests {
             assert_eq!(settings.note.read(cx).value(), "Ready");
             assert_eq!(settings.status, "Changes reverted.");
         });
+        assert_dirty(false);
+
+        action(
+            "Alert volume",
+            AccessibleAction::SetValue,
+            Some(ActionData::NumericValue(80.0)),
+        );
+        cx.run_until_parked();
+        assert_dirty(true);
+        action("Save changes", AccessibleAction::Click, None);
+        cx.run_until_parked();
+        assert_dirty(false);
+        action(
+            "Alert volume",
+            AccessibleAction::SetValue,
+            Some(ActionData::NumericValue(20.0)),
+        );
+        cx.run_until_parked();
+        assert_dirty(true);
+        action("Revert", AccessibleAction::Click, None);
+        cx.run_until_parked();
+        settings.read_with(cx, |settings, _| {
+            assert_eq!(settings.preferences.volume, 80.0);
+            assert_eq!(settings.saved_preferences.volume, 80.0);
+        });
+        assert!(
+            platform
+                .accessibility_tree_update()
+                .unwrap()
+                .nodes
+                .iter()
+                .any(|(_, node)| node.role() == Role::Status
+                    && node.value() == Some("Changes reverted.")
+                    && node.live() == Some(gpui::accesskit::Live::Polite))
+        );
         assert_dirty(false);
     }
 }

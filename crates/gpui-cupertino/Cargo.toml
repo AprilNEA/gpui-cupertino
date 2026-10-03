@@ -9,6 +9,18 @@ description = "Apple-inspired components, materials, and motion for GPUI."
 name = "components"
 test = true
 
+[[example]]
+name = "detail"
+test = true
+
+[[example]]
+name = "collections"
+test = true
+
+[[bench]]
+name = "collections"
+harness = false
+
 [[bench]]
 name = "backdrop"
 harness = false

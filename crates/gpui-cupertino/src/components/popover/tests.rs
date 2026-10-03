@@ -1,7 +1,7 @@
 use super::*;
 use gpui::{
-    KeyDownEvent, KeyUpEvent, Keystroke, Modifiers, Point, Render, Size, TestAppContext, canvas,
-    size,
+    Context, FocusHandle, KeyDownEvent, KeyUpEvent, Keystroke, Modifiers, Pixels, Point, Render,
+    Size, TestAppContext, canvas, size,
 };
 use std::{cell::RefCell, rc::Rc};
 

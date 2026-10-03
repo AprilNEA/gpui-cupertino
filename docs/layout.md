@@ -21,6 +21,8 @@ let form = Form::new("preferences", "Preferences").child(
 
 When the area itself has focus, arrow keys scroll by 40 logical pixels, Page Up/Down move by 90% of the viewport, and Home/End reach the primary-axis boundary. Child controls keep their own key handling. Accessibility scroll actions use the same page movement and clamping. A smaller content extent clamps the existing offset to the new boundary. Changing the permitted axes resets the excluded axis to zero and preserves the permitted offset.
 
-ScrollArea mounts all supplied children. Use the planned virtual collection component for large data sets. These containers use the shared theme and GPUI layout; native macOS appearance parity is not implied by the API.
+Newly focused descendants scroll into view with the smallest permitted-axis displacement. Nested areas resolve from inner to outer, and geometry settles on the next frame. Subsequent wheel scrolling does not snap back to the focused control. Deferred panels and inert descendants do not request background scrolling.
 
-Run `devenv shell -- cargo test -p gpui-cupertino --test layout --locked` to verify keyboard and accessibility scrolling, range shrinkage, child input ownership, and validation-alert removal.
+ScrollArea mounts all supplied children. Use [`CollectionView`](collections.md) for large data sets. These containers use the shared theme and GPUI layout; native macOS appearance parity is not implied by the API.
+
+Run `devenv shell -- cargo test -p gpui-cupertino --test layout --test scroll_focus --locked` to verify keyboard and accessibility scrolling, range shrinkage, child input ownership, validation-alert removal, and focus reveal with cached and nested content.

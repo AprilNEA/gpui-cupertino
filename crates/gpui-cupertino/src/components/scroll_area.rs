@@ -2,11 +2,40 @@
 
 use gpui::{
     AccessibleAction, AnyElement, App, Axis, BoxShadow, ElementId, FocusHandle, IntoElement,
-    ParentElement, Pixels, RenderOnce, Role, ScrollHandle, SharedString, StyleRefinement, Window,
-    div, prelude::*, px,
+    KeyBinding, ParentElement, Pixels, RenderOnce, Role, ScrollHandle, SharedString,
+    StyleRefinement, Window, div, prelude::*, px,
 };
 
 use crate::theme::Theme;
+
+#[derive(Clone, PartialEq, gpui::Action)]
+#[action(no_json, no_register)]
+enum ScrollAction {
+    Up,
+    Down,
+    Left,
+    Right,
+    PageUp,
+    PageDown,
+    Home,
+    End,
+}
+
+pub(crate) fn init(cx: &mut App) {
+    cx.bind_keys(
+        [
+            ("up", ScrollAction::Up),
+            ("down", ScrollAction::Down),
+            ("left", ScrollAction::Left),
+            ("right", ScrollAction::Right),
+            ("pageup", ScrollAction::PageUp),
+            ("pagedown", ScrollAction::PageDown),
+            ("home", ScrollAction::Home),
+            ("end", ScrollAction::End),
+        ]
+        .map(|(key, action)| KeyBinding::new(key, action, Some("CupertinoScroll"))),
+    );
+}
 
 /// The axes on which a scroll area permits movement.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -47,6 +76,8 @@ struct State {
 ///
 /// The area keeps its offset under a stable ID. Focus the area to use arrow keys,
 /// Page Up/Down, Home, or End. Focused child controls keep their own key behavior.
+/// A newly focused descendant is revealed with minimal scrolling on the next frame.
+/// Wheel input keeps control of the offset until focus changes again.
 /// GPUI supplies wheel scrolling and clipping. This component does not virtualize
 /// children; use a virtual list for large collections.
 #[derive(IntoElement)]
@@ -136,10 +167,12 @@ impl RenderOnce for ScrollArea {
         handle.set_offset(offset);
         let keyboard_handle = handle.clone();
         let mut area = div()
+            .autoscroll_on_focus()
             .id(self.id)
             .role(Role::ScrollView)
             .aria_label(self.label)
             .track_focus(&focus)
+            .key_context("CupertinoScroll")
             .tab_index(0)
             .min_w_0()
             .min_h_0()
@@ -156,38 +189,39 @@ impl RenderOnce for ScrollArea {
                     BoxShadow::new(px(0.), px(0.), theme.focus_ring).spread_radius(px(2.)),
                 ])
             })
-            .on_key_down(move |event, window, cx| {
-                if !focus.is_focused(window) || event.keystroke.modifiers.modified() {
+            .on_action(move |action: &ScrollAction, window, cx| {
+                if !focus.is_focused(window) {
+                    cx.propagate();
                     return;
                 }
                 let primary = axes.primary();
-                let movement = match event.keystroke.key.as_str() {
-                    "up" => Some((Axis::Vertical, px(-40.))),
-                    "down" => Some((Axis::Vertical, px(40.))),
-                    "left" => Some((Axis::Horizontal, px(-40.))),
-                    "right" => Some((Axis::Horizontal, px(40.))),
-                    "pageup" => Some((primary, -page_size(&keyboard_handle, primary))),
-                    "pagedown" => Some((primary, page_size(&keyboard_handle, primary))),
-                    "home" | "end" => {
-                        let sign = if event.keystroke.key == "home" {
+                let (axis, amount) = match action {
+                    ScrollAction::Up => (Axis::Vertical, px(-40.)),
+                    ScrollAction::Down => (Axis::Vertical, px(40.)),
+                    ScrollAction::Left => (Axis::Horizontal, px(-40.)),
+                    ScrollAction::Right => (Axis::Horizontal, px(40.)),
+                    ScrollAction::PageUp => (primary, -page_size(&keyboard_handle, primary)),
+                    ScrollAction::PageDown => (primary, page_size(&keyboard_handle, primary)),
+                    ScrollAction::Home | ScrollAction::End => {
+                        let sign = if *action == ScrollAction::Home {
                             -1.
                         } else {
                             1.
                         };
                         let maximum = keyboard_handle.max_offset();
-                        Some((
+                        (
                             primary,
                             match primary {
                                 Axis::Vertical => maximum.y * sign,
                                 Axis::Horizontal => maximum.x * sign,
                             },
-                        ))
+                        )
                     }
-                    _ => None,
                 };
-                if let Some((axis, amount)) = movement.filter(|(axis, _)| axes.permits(*axis)) {
+                if axes.permits(axis) {
                     scroll_by(&keyboard_handle, axis, amount, window);
-                    cx.stop_propagation();
+                } else {
+                    cx.propagate();
                 }
             })
             .children(self.children);

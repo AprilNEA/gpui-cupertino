@@ -1,6 +1,6 @@
 # Component contracts
 
-Call `gpui_cupertino::init(cx)` once during application startup to register single-line editing keys. The application must bind Tab and Shift-Tab to `Window::focus_next` and `Window::focus_prev` in its root view. See `examples/components.rs` for a complete settings form.
+Call `gpui_cupertino::init(cx)` once during application startup to register component key bindings. Bind Tab and Shift-Tab to `Window::focus_next` and `Window::focus_prev` in the root view's key context. Scoped component bindings then take precedence over ancestor navigation. GPUI treats context-free bindings registered after initialization as explicit user overrides. See the [settings example](../crates/gpui-cupertino/examples/components.rs) for a complete composition.
 
 `Theme::for_window(window)` resolves semantic colors from the current light or dark window appearance. Theme colors are library defaults. They do not read the system accent color. The palette checks require text contrast of at least 4.5:1 and control boundary contrast of at least 3:1 on the supported opaque surfaces.
 
@@ -26,13 +26,19 @@ Retain one `Entity<PopoverState>` per rendered popover. Pass the state, trigger,
 
 The panel uses GPUI anchored layout and deferred painting. The panel fits the window and scrolls oversized content. The caller owns the content surface; `Glass` can supply the surface on supported macOS renderers. A scene regression checks that deferred glass samples preceding content and paints its foreground afterward.
 
-Opening focuses the panel or the control passed to `initial_focus`. When focus is inside the panel, an unconsumed Escape event closes the panel. Clicking outside the panel and trigger closes the panel and preserves the outside click. Closing restores trigger focus only when the popover still owns focus. This nonmodal component does not trap Tab. Nested popovers require a shared dismissal policy and are not supported yet.
+Opening focuses the panel or the control passed to `initial_focus`. An unconsumed Escape event or outside click closes the top panel. Closing an ancestor closes panels opened above that ancestor. Outside clicks retain their normal destination. Closing restores trigger focus only when the panel owns focus. This nonmodal component does not trap Tab. See [menus and panels](panels.md) for shared dismissal, menus, tooltips, dialogs, sheets, and the modal input boundary.
+
+## Forms and navigation
+
+See [choice controls](choice-controls.md) for Toggle, Checkbox, and RadioGroup. See [value controls](value-controls.md) for Slider, Stepper, SegmentedControl, and Progress. Values remain controlled by the caller, and state changes use the same callback across supported input paths.
+
+See [forms and scrolling](layout.md) for Form, FormSection, FormField, Toolbar, ScrollArea, and EmptyState. Containers preserve child control ownership. ScrollArea adds focused keyboard scrolling and accessibility scroll actions. [Tabs and Sidebar](navigation.md) share option identity and roving focus; [SplitView](split-view.md) adds pointer, keyboard, and accessibility resizing.
+
+## Collections
+
+See [virtual collections](collections.md) for retained lists and tables, stable row identity, filtering, multiple selection, sorting, column resizing, and internal drag and drop. The [searchable collection example](../crates/gpui-cupertino/examples/collections.rs) combines search, list selection, a detail panel, and table operations. The [detail example](../crates/gpui-cupertino/examples/detail.rs) combines draft editing, nested confirmation, menus, and tooltips.
 
 ## Verification
-
-See [forms and scrolling](layout.md) for Form, FormSection, FormField, Toolbar,
-ScrollArea, and EmptyState. The containers preserve child control ownership;
-ScrollArea adds focused keyboard scrolling and accessibility scroll actions.
 
 Run `devenv test` before committing. The workspace checks compile the showcase and verify input editing, platform IME calls, pointer and keyboard dispatch, focus restoration, panel placement, accessibility trees and actions, and the existing Metal material regressions.
 

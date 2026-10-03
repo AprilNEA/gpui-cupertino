@@ -9,9 +9,10 @@ pub use cupertino;
 pub mod components;
 pub mod theme;
 
-/// Register default single-line editing keys before creating application windows.
+/// Register component key bindings before creating application windows.
 ///
-/// Call once during startup. The application owns Tab navigation and global actions.
+/// Call once during startup. Bind ordinary Tab navigation in an ancestor key context.
+/// The application owns global actions; modal panels constrain their own Tab traversal.
 pub fn init(cx: &mut gpui::App) {
     components::init(cx);
 }
