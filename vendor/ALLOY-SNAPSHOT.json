@@ -18,7 +18,7 @@
     },
     "README.md": {
       "executable": false,
-      "sha256": "aeee03d1d2c8199d4700d39cb2930e4922572afda50f74f2ab0b3b28b5465f49",
+      "sha256": "15141d9e105687fbb788158dd2c8c4c339fd7bba67512c9179c644efa3b1f14d",
       "type": "file"
     },
     "alloy-source/.cargo/config.toml": {
@@ -2218,7 +2218,7 @@
     "sources": "Keep complete crate directories, assets/fonts and root licenses unchanged.",
     "workspace": "Keep resolver, package, used dependencies and lints; replace members. Generate README.md."
   },
-  "revision": "19fc9968f689ccce2b9e31c2eb9a76ec442333dc",
+  "revision": "d21987f81a013ec67945892506bcc6aae8a2db0f",
   "roots": [
     "crates/gpui",
     "crates/gpui_platform"

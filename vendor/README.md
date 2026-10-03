@@ -1,6 +1,6 @@
 # GPUI Alloy source export
 
-Revision: `19fc9968f689ccce2b9e31c2eb9a76ec442333dc`.
+Revision: `d21987f81a013ec67945892506bcc6aae8a2db0f`.
 
 Upstream: `4c841aaf1c4fa613e89a5d77096523d0ff593b56`.
 

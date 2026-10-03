@@ -7,11 +7,11 @@ GPUI 自维护规范和补丁台账位于 [AprilNEA/gpui-alloy](https://github.c
 2026-10-03：首次从 Alloy 的已验收固定快照重建 `vendor/`，纳入原有 9 项补丁及已有 2 个上游 PR 的本地适配。后续 GPUI 修改必须先进入 Alloy 的独立主题分支，再经过集成、导出和消费方验收。
 
 - 上游基线 `U`：`4c841aaf1c4fa613e89a5d77096523d0ff593b56`。
-- Alloy 快照 `D`：`19fc9968f689ccce2b9e31c2eb9a76ec442333dc`。
-- 快照 tag：`gpui-alloy/20261003.1`，附注 tag，暂不签名。
+- Alloy 快照 `D`：`d21987f81a013ec67945892506bcc6aae8a2db0f`。
+- 快照 tag：`gpui-alloy/20261003.1`，附注 tag，已使用 1Password SSH 密钥签名。
 - 导出记录：[vendor/ALLOY-SNAPSHOT.json](../vendor/ALLOY-SNAPSHOT.json)。记录含完整路径、文件摘要、包路径、U、D 和 exporter 摘要。
 - exporter SHA-256：`fa10e78736b16d03c92c6740850a5845c18ffc21b101b61cb885da370831c000`。
-- 导出记录 SHA-256：`465379119dbb45efd5dfd5335675a3ed6003337a1397f6dd091c0d6f96e58f63`。
+- 导出记录 SHA-256：`88a1781f7241d1f6a5f0f178a63230e0730085fce93c0f1049b66445a076615a`。
 - `Cargo.lock` SHA-256：`9ae61f398a36a8f1f00329e7fc26abf9913ac797b2750437981e8545dbe7fef2`，本次未改动。
 - 导入提交 `V`：从包含本记录的导入提交取得；完整 SHA 和验收结果记入 Alloy 主分支的后续事件，避免提交自引用。
 
@@ -23,10 +23,17 @@ Alloy 的固定 D 已通过完整组合验收：491 项库测试、5 项 scene�
 
 验证环境为 macOS `26.4 (25E246)`、Apple M5 Max、Xcode `26.6 (17F113)`、Rust `1.98.1`、Cargo `1.98.1`。当前两个显示器均为 `2×`，不代表已验证跨显示器迁移。材质仍限原生 macOS Metal 的不透明 SDR 窗口；Inactive Clear 要求 Apple GPU、Metal 3.1 和可参数化的 RGB ColorSync 配置。HDR/EDR、混合 DPI、原生 VoiceOver/IME 及完整历史原生截图采样未验收。
 
-Alloy 分支、文档和 tag 当前仅在本地，尚未推送。未发布 crate、未新建 PR，原有 PR 分支未改写。由维护人按 Alloy 主台账的明确引用列表推送。
+维护人已授权首次远端发布前的重新签名与推送。提交、tag 的旧→新映射及远端核对结果见 Alloy 主台账。原有 Zed PR 分支保持不变。
 
 ## 重现与回退
 
 在 Alloy 仓库使用上述 U、D 和 exporter 导出到新目录。先运行 `verify-consumer`，再执行本仓库的 `devenv test`。必须在 vendor 之外保存构建产物，保持来源清单可核对。
 
 本次导入前的 vendor 来源已固定在 Cupertino 提交 `c79bb253dd456877b61e1503ec4f2c549838a86e`。发生回归时，用新的提交恢复该来源的整套 vendor 及与其配套的消费方配置；不要移动快照 tag 或撤销无关组件工作。本次未改变 manifest 和 lockfile。旧构建缓存不属于源码或回退记录。
+
+
+## 首次发布前签名迁移
+
+2026-10-03：维护人明确要求重新签名后推送。Alloy 的签名 D 为 `d21987f81a013ec67945892506bcc6aae8a2db0f`，与原 D `19fc9968f689ccce2b9e31c2eb9a76ec442333dc` 的完整源码树一致。旧 D、旧导入提交和原 tag 对象均由签名归档保留；本次同名 tag 重建仅适用于首次远端发布前的明确授权，不改变后续快照不可变规则。
+
+冻结提交的签名版本为 `7bb5515bae5ab84db2360324a1bc8fc12ae6f1b4`；原导入提交的签名版本为 `a316fcf8ea2f9f4877f4f197bc6044b60619ffb9`。二者的源码树、作者、消息和父拓扑均已核对。随后从签名 D 重新导出，仅 `vendor/README.md` 与 `vendor/ALLOY-SNAPSHOT.json` 的来源信息发生变化；生产源码、资源、manifest 和 lockfile 均保持原样。来源检查与签名后验收日志由 Alloy 主台账记录。
