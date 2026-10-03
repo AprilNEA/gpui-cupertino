@@ -49,6 +49,7 @@ cargo build --workspace --locked
 cargo run -p gpui-cupertino --example components --locked
 cargo run -p gpui-cupertino --example collections --locked
 cargo run -p gpui-cupertino --example detail --locked
+cargo run -p gpui-cupertino --example navigation --locked
 cargo run -p gpui-cupertino --example glass --locked
 check
 ```
@@ -62,11 +63,13 @@ devenv test
 
 The checks include interaction, accessibility, and actual Metal readback tests.
 The examples cover a settings form, searchable multiple-selection collections,
-and detail editing with nested modal panels. Call
+detail editing with nested modal panels, and workspace navigation with resizable
+panes, retained tabs, empty states, and loading progress. Call
 `gpui_cupertino::init(cx)` at startup to enable component key bindings. The glass
 example has a scrollable
 coordinate grid, reversible spring motion, neighboring glass, and accessibility
 overrides. GPUI is pinned and patched in [vendor/](vendor/README.md); use that
 copy when integrating this workspace.
+macOS applications must enable the `font-kit` feature on `gpui_platform` to render text; the examples enable this feature.
 The [native comparison procedure](docs/validation.md#reproduction-and-native-comparison)
 supports separate active and inactive material probes.

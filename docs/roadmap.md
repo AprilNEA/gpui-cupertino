@@ -16,7 +16,7 @@ Acceptance must include three runnable compositions: a settings form, a searchab
 | Navigation and layout | Form groups, toolbar, sidebar, tabs, split view, scrolling, empty states | Implemented; workspace checks pass. Native acceptance remains. |
 | Collections | Virtual lists, selection, search, tables, sorting, resizing, drag and drop | Implemented with GPUI virtualization and stable row selection; workspace checks pass. Native acceptance remains. |
 | Menus and panels | Menus, tooltips, dialogs, sheets, nested floating panels | Implemented with shared dismissal and modal input exclusion; workspace checks pass. Native acceptance remains. |
-| Integrated acceptance | Settings form, searchable multiple-selection list, detail panel, native input/accessibility checks, performance baselines | Three runnable compositions, CPU tests, and API documentation are implemented. Debug and optimized CPU baselines are recorded. The full `devenv test` gate passed on 2026-10-03. Native acceptance remains incomplete. |
+| Integrated acceptance | Settings form, searchable multiple-selection list, detail panel, native input/accessibility checks, performance baselines | The three required compositions and a navigation showcase are runnable. CPU tests, API documentation, and CPU baselines are recorded. The full `devenv test` gate passed on 2026-10-03 with native font rendering enabled. Native interaction checks have started; Chinese IME, VoiceOver, frame delivery, and native frame-time acceptance remain incomplete. |
 
 The first component milestone does not complete the repository goal. Password fields, rich text, and unmeasured cross-platform parity are not implied by the current APIs.
 
