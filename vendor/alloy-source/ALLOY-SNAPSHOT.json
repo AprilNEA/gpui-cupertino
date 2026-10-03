@@ -1,11 +1,6 @@
 {
-  "exporter_sha256": "9a82458aa24bedaaf9f592f57d2f956e612dfab1dc31265190e7624bebb69d45",
+  "exporter_sha256": "fa10e78736b16d03c92c6740850a5845c18ffc21b101b61cb885da370831c000",
   "files": {
-    "ALLOY-SOURCE.json": {
-      "executable": false,
-      "sha256": "8114835e4400468cf615802262bd54c5f09522b6687a126dea5b0302ef216d30",
-      "type": "file"
-    },
     "Cargo.toml": {
       "executable": false,
       "sha256": "348e69e56d943704bac072144b70c70b3b86f67a8347941dfb7d5ae8cc11ec90",
@@ -23,17 +18,12 @@
     },
     "README.md": {
       "executable": false,
-      "sha256": "f5f84f9d395e97cb5020a93bf8b1daf0ada0efc8e8ebf268f1c7e71d8ffa0079",
+      "sha256": "15141d9e105687fbb788158dd2c8c4c339fd7bba67512c9179c644efa3b1f14d",
       "type": "file"
     },
     "alloy-source/.cargo/config.toml": {
       "executable": false,
       "sha256": "bac3a152624488a520b492297901f8190a5acfc9dacb4cdda14b4c471fdca9ca",
-      "type": "file"
-    },
-    "alloy-source/ALLOY-SNAPSHOT.json": {
-      "executable": false,
-      "sha256": "88a1781f7241d1f6a5f0f178a63230e0730085fce93c0f1049b66445a076615a",
       "type": "file"
     },
     "alloy-source/Cargo.lock": {
@@ -2192,7 +2182,7 @@
       "type": "file"
     }
   },
-  "format": 2,
+  "format": 1,
   "packages": {
     "collections": "crates/collections/Cargo.toml",
     "derive_refineable": "crates/refineable/derive_refineable/Cargo.toml",
@@ -2223,22 +2213,15 @@
   },
   "policy": {
     "closure": "All path dependencies, including optional, target, build and dev dependencies.",
-    "provenance": "Keep ALLOY-SOURCE.json and original export provenance unchanged; do not activate original controls.",
+    "provenance": "Keep original root controls in alloy-source; do not activate those controls.",
     "resolution": "The consumer root configuration and Cargo.lock control external dependencies.",
     "sources": "Keep complete crate directories, assets/fonts and root licenses unchanged.",
     "workspace": "Keep resolver, package, used dependencies and lints; replace members. Generate README.md."
   },
-  "revision": "9d59ea617d75d02e4645eefd22844235431138c8",
+  "revision": "d21987f81a013ec67945892506bcc6aae8a2db0f",
   "roots": [
     "crates/gpui",
     "crates/gpui_platform"
   ],
-  "source": {
-    "format": 1,
-    "kind": "standalone-source",
-    "repository": "https://github.com/AprilNEA/zed",
-    "revision": "d21987f81a013ec67945892506bcc6aae8a2db0f",
-    "snapshot_sha256": "88a1781f7241d1f6a5f0f178a63230e0730085fce93c0f1049b66445a076615a",
-    "upstream": "4c841aaf1c4fa613e89a5d77096523d0ff593b56"
-  }
+  "upstream": "4c841aaf1c4fa613e89a5d77096523d0ff593b56"
 }

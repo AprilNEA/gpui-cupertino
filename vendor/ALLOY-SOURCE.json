@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "kind": "standalone-source",
+  "repository": "https://github.com/AprilNEA/zed",
+  "upstream": "4c841aaf1c4fa613e89a5d77096523d0ff593b56",
+  "revision": "d21987f81a013ec67945892506bcc6aae8a2db0f",
+  "snapshot_sha256": "88a1781f7241d1f6a5f0f178a63230e0730085fce93c0f1049b66445a076615a"
+}
