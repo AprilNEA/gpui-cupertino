@@ -4,7 +4,15 @@ GPUI 自维护规范和补丁台账位于 [AprilNEA/gpui-alloy](https://github.c
 
 完整 Zed 来源、集成提交 D 和各上游候选的独立主题分支位于 [AprilNEA/zed](https://github.com/AprilNEA/zed)；已有 PR 继续使用原分支。精简前的 Alloy 完整历史、旧 D 和旧快照 tag 保存在 [AprilNEA/gpui-alloy-archive](https://github.com/AprilNEA/gpui-alloy-archive)。后续生产源码修改先在完整来源仓库形成独立主题和集成 D，再更新精简 Alloy 的来源记录、固定 S 并完成消费方验收。
 
-## 当前消费状态
+## Registry 消费状态
+
+2026-10-05：接入 crates.io 上的 Alloy `=0.1.1` 完整家族，保留 `gpui`、`gpui_apple` 和 `gpui_platform` 的 Rust 别名及 `test-support`、`font-kit` features。固定来源 S 为 `1a77576c8ef715f2ceaece8af18017cb360434c9`，包含 GPUI-012。31 包 registry 身份及 checksum、消费方格式、严格 Clippy、123 项测试和使用 registry 产物的原生焦点回归均通过。发布记录位于 Alloy 的 `docs/releases/0.1.1/`。
+
+Tooltip 的焦点监听发生在绘制期间；本次修复在当前帧结束后发送状态通知，确保提示及其无障碍节点随焦点变化刷新。现有回归测试在 vendor 和 registry 依赖下均通过。此前 `focus_paint` 失败在重建 Cupertino 产物后消失，未修改组件源码或测试断言。
+
+`vendor/` 保留为历史来源记录。后续更新必须核对 registry 名称、精确版本、来源和冻结 checksum，再运行消费方检查及原生焦点回归。
+
+## GPUI-012 vendor 快照历史
 
 2026-10-04：GPUI-012 已通过本地来源与行为验收，补齐 macOS 原生窗口的辅助功能焦点转发。完整来源主题已集成到新的 D，独立 Alloy 已固定到已签名的 S，消费者已导入该 S。本记录提交时尚未创建新快照 tag，未 push；后续本地 tag 身份记录在 Alloy 台账。`gpui-alloy/20261003.2` 的发布记录保留在后文历史小节。
 

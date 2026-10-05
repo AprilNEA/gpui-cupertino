@@ -31,13 +31,18 @@ impl TooltipState {
         cx: &mut Context<Self>,
     ) -> Self {
         let focused = focus.contains_focused(window, cx);
+        // Focus listeners run during drawing, so invalidate the hint after the frame completes.
         let on_focus = cx.on_focus_in(focus, window, |state, _, cx| {
             state.focused = true;
             state.update_visibility(cx);
+            let entity_id = cx.entity_id();
+            cx.defer(move |cx| cx.notify(entity_id));
         });
         let on_blur = cx.on_focus_out(focus, window, |state, _, _, cx| {
             state.focused = false;
             state.update_visibility(cx);
+            let entity_id = cx.entity_id();
+            cx.defer(move |cx| cx.notify(entity_id));
         });
         Self {
             description: description.into(),

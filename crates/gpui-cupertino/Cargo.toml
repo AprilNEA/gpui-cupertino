@@ -30,14 +30,14 @@ workspace = true
 
 [dependencies]
 cupertino = { version = "0.1.0", path = "../cupertino" }
-gpui = { version = "0.2.2", path = "../../vendor/crates/gpui" }
+gpui = { version = "=0.1.1", package = "gpui-alloy" }
 unicode-segmentation = "1.13.3"
 
 [dev-dependencies]
 anyhow = "1.0.104"
-gpui = { path = "../../vendor/crates/gpui", features = ["test-support"] }
-gpui_apple = { path = "../../vendor/crates/gpui_apple", features = ["test-support"] }
-gpui_platform = { path = "../../vendor/crates/gpui_platform", features = ["font-kit", "test-support"] }
+gpui = { version = "=0.1.1", package = "gpui-alloy", features = ["test-support"] }
+gpui_apple = { features = ["test-support"], version = "=0.1.1", package = "gpui-alloy-apple" }
+gpui_platform = { features = ["font-kit", "test-support"], version = "=0.1.1", package = "gpui-alloy-platform" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6.2"

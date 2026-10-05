@@ -84,6 +84,42 @@ fn hover(cx: &mut VisualTestContext) {
 }
 
 #[gpui::test]
+fn focus_changes_render_and_remove_the_hint_without_an_external_refresh(cx: &mut TestAppContext) {
+    let (view, cx) = open(cx);
+    cx.simulate_mouse_move(point(px(600.), px(400.)), None, Modifiers::none());
+    let handle = cx.update(|window, _| window.window_handle());
+    let platform = cx.test_window(handle);
+    // Accessibility activation requests a refresh. Complete activation before changing focus.
+    platform.activate_accessibility();
+    cx.run_until_parked();
+    assert!(cx.debug_bounds("tooltip-hint").is_none());
+
+    cx.update(|window, cx| view.read(cx).trigger.clone().focus(window, cx));
+    cx.run_until_parked();
+    assert!(cx.debug_bounds("tooltip-hint").is_some());
+    assert!(
+        platform
+            .accessibility_tree_update()
+            .unwrap()
+            .nodes
+            .iter()
+            .any(|(_, node)| node.role() == Role::Tooltip && node.label() == Some("Help text"))
+    );
+
+    cx.update(|window, cx| view.read(cx).outside.clone().focus(window, cx));
+    cx.run_until_parked();
+    assert!(cx.debug_bounds("tooltip-hint").is_none());
+    assert!(
+        !platform
+            .accessibility_tree_update()
+            .unwrap()
+            .nodes
+            .iter()
+            .any(|(_, node)| node.role() == Role::Tooltip)
+    );
+}
+
+#[gpui::test]
 fn hover_escape_dismisses_before_parent_handlers_and_waits_for_pointer_leave(
     cx: &mut TestAppContext,
 ) {
